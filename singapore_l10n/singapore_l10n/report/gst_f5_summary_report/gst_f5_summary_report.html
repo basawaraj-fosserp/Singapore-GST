@@ -1,0 +1,35 @@
+<h1 class="text-center">{%= __("GST F5") %}</h1>
+<h2 class="text-center">{%= __("GOODS AND SERVICES TAX RETURN") %}</h2>
+<h3 class="text-left">{%= __("Name") %}</h3>
+<h4 class="text-left">{%= __("GST Refrence No") %}</h4>
+<h5 class="text-left">
+    {%= __("Period covered by this return:") %}
+	{%= frappe.datetime.str_to_user(filters.from_date) %}
+	{%= __("to") %}
+	{%= frappe.datetime.str_to_user(filters.to_date) %}
+</h5>
+<h6>{%= __("Supplies") %}</h6>
+ <tbody>
+    <tr>
+    <td>{%= data[0].transaction_type %}</td>
+    <td>{%= data[0].amount %}</td>
+    </tr><br>
+    <td>{%= data[1].transaction_type %}</td>
+    <td>{%= data[1].amount %}</td>
+    </tr><br>
+    <td>{%= data[2].transaction_type %}</td>
+    <td>{%= data[2].amount %}</td>
+    </tr><br>
+    <td>{%= data[3].transaction_type %}</td>
+    <td>{%= data[3].amount %}</td>
+    </tr><br>
+    <td>{%= data[4].transaction_type %}</td>
+    <td>{%= data[4].amount %}</td>
+    </tr><br>
+    <td>{%= data[1].transaction_type %}</td>
+    <td>{%= data[2].transaction_type %}</td>
+    <td>{%= data[3].transaction_type %}</td>
+    <td>{%= data[4].transaction_type %}</td>
+    </tr>
+    </tbody>
+</thead>
