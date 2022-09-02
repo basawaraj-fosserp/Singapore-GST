@@ -34,7 +34,7 @@ def get_data(filters = None):
 		'parent': 'Singapore GST Settings',
 		'company':filters.company
 		},
-		['box_1', 'box_2', 'box_3', 'exempted_supplies', 'bank_interest_income', 'realised_exchange_gainloss'])
+		['box_1', 'box_2', 'box_3', 'bank_interest_income', 'realised_exchange_gainloss'])
 
 	if sgst_details and (sgst_details[0].get('box_1') or sgst_details[0].get('box_2') or sgst_details[0].get('box_3')
 		or sgst_details[0].get('bank_interest_income') or sgst_details[0].get('realised_exchange_gainloss')):
