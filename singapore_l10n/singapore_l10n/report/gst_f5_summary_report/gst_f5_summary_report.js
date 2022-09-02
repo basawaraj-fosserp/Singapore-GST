@@ -24,6 +24,6 @@ frappe.query_reports["GST F5 Summary Report"] = {
 			'fieldtype':'Date',
 			'width':100,
 			// 'default':frappe.datetime.get_today()
-		},  
+		}
 	]
 };

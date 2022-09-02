@@ -35,7 +35,7 @@ def get_data(filters = None):
 		'company':filters.company
 		},
 		['box_1', 'box_2', 'box_3', 'exempted_supplies', 'bank_interest_income', 'realised_exchange_gainloss'])
-	print('\n\n\nnakash', sgst_details)
+
 	if sgst_details and (sgst_details[0].get('box_1') or sgst_details[0].get('box_2') or sgst_details[0].get('box_3')
 		or sgst_details[0].get('bank_interest_income') or sgst_details[0].get('realised_exchange_gainloss')):
 		jv_query = f'''
@@ -96,7 +96,6 @@ def get_data(filters = None):
 		for data in py_data:
 			k = data.get('amount')
 			total_py = total_py+k
-		print('\n\n\ikik', py_data)
 		query = f'''
 		SELECT
 			st.account_head AS gst_code,
@@ -118,7 +117,6 @@ def get_data(filters = None):
 			query = f'''{query} AND DATE(si.posting_date) <= "{to_date}"'''
 
 		sql_data= frappe.db.sql(f"{query}", as_dict=True)
-		print('\n\n\ijiji', sql_data)
 		out_data = []
 		sales_invoice_with_tax = []
 		sales_invoice_with_tax_total = 0
