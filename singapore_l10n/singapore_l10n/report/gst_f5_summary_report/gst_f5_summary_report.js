@@ -10,7 +10,7 @@ frappe.query_reports["GST F5 Summary Report"] = {
 			'fieldtype':'Link',
 			'options':'Company',
 			'width':100,
-		},
+			"default": frappe.defaults.get_user_default("Company"),		},
 		{
 			'fieldname':'from_date',
 			'label':__('From Date'),
