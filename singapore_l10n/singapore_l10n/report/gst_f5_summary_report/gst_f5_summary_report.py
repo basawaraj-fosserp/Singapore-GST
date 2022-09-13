@@ -1,6 +1,5 @@
 
 
-
 import frappe
 from frappe import _
 
@@ -100,8 +99,7 @@ def get_data(filters = None):
 		SELECT
 			st.account_head AS gst_code,
 			st.base_tax_amount as amount,
-			si.base_total as taxless_total
-			
+			IF(st.included_in_print_rate, si.net_total, si.base_total) as taxless_total
 		FROM
 			`tabSales Invoice` AS si,
 			`tabSales Taxes and Charges` AS st
@@ -164,8 +162,7 @@ def get_data(filters = None):
 		SELECT
 			pt.account_head AS gst_code,
 			pt.base_tax_amount as amount,
-			p.base_total as taxless_total
-			
+			IF(pt.included_in_print_rate, p.net_total, p.total) as taxless_total
 		FROM
 			`tabPurchase Invoice` AS p,
 			`tabPurchase Taxes and Charges` AS pt

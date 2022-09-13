@@ -1,6 +1,5 @@
 
 
-
 import frappe
 from frappe import _
 import json
@@ -73,7 +72,6 @@ def get_columns(filters = None):
 
 
 def get_data(filters = None):
-	print('\n\n\nhere')
 	out_data = []
 	from_date = filters.get('from_date')
 	to_date = filters.get('to_date')
@@ -152,8 +150,7 @@ def get_data(filters = None):
 			st.rate as gst_rate,
 			st.base_total as net_amount,
 			st.base_tax_amount as amount,
-			si.base_total as taxless_total
-			
+			IF(st.included_in_print_rate, si.net_total, si.base_total) as taxless_total
 		FROM
 			`tabSales Invoice` AS si,
 			`tabSales Taxes and Charges` AS st
@@ -233,7 +230,7 @@ def get_data(filters = None):
 			pt.rate as gst_rate,
 			pt.base_total as net_amount,
 			pt.base_tax_amount as amount,
-			p.total as taxless_total
+			IF(pt.included_in_print_rate, p.net_total, p.total) as taxless_total
 			
 		FROM
 			`tabPurchase Invoice` AS p,

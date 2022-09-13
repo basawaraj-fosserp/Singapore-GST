@@ -10,14 +10,14 @@
   "column_break_2",
   "box_1",
   "box_2",
-  "section_break_5",
-  "other_income",
   "section_break_7",
   "box_3_section_break",
   "box_3",
   "bank_interest_income",
   "column_break_9",
-  "realised_exchange_gainloss"
+  "realised_exchange_gainloss",
+  "section_break_5",
+  "other_income"
  ],
  "fields": [
   {
@@ -91,7 +91,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-09-13 18:46:30.577796",
+ "modified": "2022-09-13 22:03:35.418637",
  "modified_by": "Administrator",
  "module": "Singapore L10N",
  "name": "SGST Detail",
