@@ -231,7 +231,6 @@ def get_data(filters = None):
 			pt.base_total as net_amount,
 			pt.base_tax_amount as amount,
 			IF(pt.included_in_print_rate, p.net_total, p.total) as taxless_total
-			
 		FROM
 			`tabPurchase Invoice` AS p,
 			`tabPurchase Taxes and Charges` AS pt
