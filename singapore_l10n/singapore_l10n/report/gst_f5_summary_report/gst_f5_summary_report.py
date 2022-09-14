@@ -1,7 +1,8 @@
 
-
 import frappe
 from frappe import _
+from erpnext.accounts.report.financial_statements import (get_data as financial_state_data,
+get_period_list)
 
 def execute(filters=None):
 	columns = get_columns(filters)
@@ -27,14 +28,15 @@ def get_columns(filters = None):
 
 def get_data(filters = None):
 	out_data = []
+	acc_diff = 0
 	from_date = filters.get('from_date')
 	to_date = filters.get('to_date')
 	sgst_details = frappe.db.get_all('SGST Detail', {
 		'parent': 'Singapore GST Settings',
 		'company':filters.company
 		},
-		['box_1', 'box_2', 'box_3', 'bank_interest_income', 'realised_exchange_gainloss'])
-
+		['box_1', 'box_2', 'box_3', 'bank_interest_income', 'realised_exchange_gainloss', 'other_income'])
+	acc_diff = get_account_data(filters, sgst_details)
 	if sgst_details and (sgst_details[0].get('box_1') or sgst_details[0].get('box_2') or sgst_details[0].get('box_3')
 		or sgst_details[0].get('bank_interest_income') or sgst_details[0].get('realised_exchange_gainloss')):
 		jv_query = f'''
@@ -225,6 +227,63 @@ def get_data(filters = None):
 		box_10=[{'transaction_type':'Total value of tourist refund claimed', 'heading':1, 'amount':0}]
 		box_11=[{'transaction_type':'Total value of bad debts relief', 'heading':1, 'amount':0}]
 		box_12=[{'transaction_type':'Pre-registration claims', 'heading':1, 'amount':0}]
-		box_13=[{'transaction_type':'Revenue', 'heading':1, 'amount':0}]
+		box_13=[{'transaction_type':'Revenue', 'heading':1, 'amount':acc_diff}]
 		out_data = out_data + box_8 + box_9 + box_10 + box_11 + box_12 + box_13 
 	return out_data
+
+def get_account_data(filters, sgst_details):
+	total = 0
+	other_income_total = 0
+	acc_diff = 0
+
+	if not filters.from_date or not filters.to_date:
+		return 0
+
+	if sgst_details and not sgst_details[0].get('other_income'):
+		return 0
+
+	period_list = get_period_list(
+		frappe.defaults.get_user_default("fiscal_year"),
+		frappe.defaults.get_user_default("fiscal_year"),
+		filters.from_date,
+		filters.to_date,
+		'Date Range',
+		'Yearly',
+		company=filters.company,
+	)
+
+	period_list_filter = frappe._dict({
+		"from_fiscal_year" : frappe.defaults.get_user_default("fiscal_year"),
+		"to_fiscal_year" : frappe.defaults.get_user_default("fiscal_year"),
+		"period_start_date" : filters.from_date,
+		"period_end_date" : filters.to_date,
+		"periodicity" : "Yearly",
+		"filter_based_on" : "Fiscal Year",
+		"company" : filters.company,
+		"accumulated_values": 1,
+		"cost_center":  [],
+		"include_default_book_entries": 1,
+		"division": [],
+		"project": [],
+		"presentation_currency": frappe.db.get_value("Global Defaults", None, "default_currency")
+	})
+
+	income = financial_state_data(
+		filters.company,
+		"Income",
+		"Credit",
+		period_list,
+		filters=period_list_filter,
+		accumulated_values= 0,
+		ignore_closing_entries=True,
+		ignore_accumulated_values_for_fy=True,
+	)
+
+	for inc in income:
+		if inc.get('account_name') == 'Total Income (Credit)':
+			total = inc.get('total')
+		if inc.get('account') == sgst_details[0].get('other_income'):
+			other_income_total = inc.get('total')
+	acc_diff = float(total) - float(other_income_total)
+
+	return acc_diff
