@@ -235,7 +235,8 @@ def get_data(filters = None):
 			`tabPurchase Invoice` AS p,
 			`tabPurchase Taxes and Charges` AS pt
 		WHERE
-			pt.parent=p.name AND p.docstatus = 1'''
+			pt.parent=p.name AND p.docstatus = 1 AND pt.parenttype = "Purchase Invoice" AND
+			pt.account_head = "1-14020 - GST-TX7 - KSGPL"'''
 
 		if filters.company:
 			query = f'''{pi_query} AND p.company="{filters.company}"'''
