@@ -35,7 +35,7 @@ def get_data(filters = None):
 		'parent': 'Singapore GST Settings',
 		'company':filters.company
 		},
-		['box_1', 'box_2', 'box_3', 'bank_interest_income', 'realised_exchange_gainloss', 'other_income'])
+		['box_1', 'box_2', 'box_3', 'box_5', 'bank_interest_income', 'realised_exchange_gainloss', 'other_income'])
 	acc_diff = get_account_data(filters, sgst_details)
 	if sgst_details and (sgst_details[0].get('box_1') or sgst_details[0].get('box_2') or sgst_details[0].get('box_3')
 		or sgst_details[0].get('bank_interest_income') or sgst_details[0].get('realised_exchange_gainloss')):
@@ -159,7 +159,7 @@ def get_data(filters = None):
 		total = total+abs(total_jv)+abs(total_py)
 		out_data = box_1_total_line + box_2_total_line + box_3_total_line
 		out_data = out_data + [{'transaction_type':'Box 4 Total (Box 1, Box 2, Box 3)', 'heading':1, 'amount':total}]
-		
+
 		pi_query = f'''
 		SELECT
 			pt.account_head AS gst_code,
@@ -170,7 +170,7 @@ def get_data(filters = None):
 			`tabPurchase Taxes and Charges` AS pt
 		WHERE
 			pt.parent=p.name AND p.docstatus = 1 AND pt.parenttype = "Purchase Invoice" AND
-			pt.account_head = "{sgst_details[0].get('box_2')}"'''
+			pt.account_head = "{sgst_details[0].get('box_5')}"'''
 		if filters.company:
 			query = f'''{pi_query} AND p.company="{filters.company}"'''
 
@@ -179,7 +179,7 @@ def get_data(filters = None):
 		if to_date:
 			pi_query = f'''{pi_query} AND DATE(p.posting_date) <= "{to_date}"'''
 		pi_query = f"{pi_query} ORDER By p.name"
-		
+
 		p_sql_data= frappe.db.sql(f"{pi_query}", as_dict=True)
 		box_5_balance_total = 0
 		box_7_balance_total = 0
