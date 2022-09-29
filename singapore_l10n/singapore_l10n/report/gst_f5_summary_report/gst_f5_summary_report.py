@@ -164,7 +164,7 @@ def get_data(filters = None):
 		SELECT
 			pt.account_head AS gst_code,
 			pt.base_tax_amount as amount,
-			IF(pt.included_in_print_rate, p.net_total, p.total) as taxless_total
+			IF(pt.included_in_print_rate, p.net_total, p.base_net_total) as taxless_total
 		FROM
 			`tabPurchase Invoice` AS p,
 			`tabPurchase Taxes and Charges` AS pt
