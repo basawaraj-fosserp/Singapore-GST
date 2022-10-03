@@ -3,6 +3,9 @@ import json
 from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_summary import (
 	execute as get_ageing,
 )
+from erpnext import get_company_currency
+from erpnext.accounts.party import get_party_account_currency
+from erpnext.accounts.report.general_ledger.general_ledger import execute as get_soa
 
 @frappe.whitelist()
 def get_statements_of_account(name):
@@ -14,20 +17,51 @@ def get_statements_of_account(name):
 	out_list = []
 	for cust in psoa_doc.customers:
 		cust_dict = {}
-		si_query = f'''
-			SELECT
-				name,
-				posting_date,
-				due_date,
-				total,
-				po_no
-			FROM
-				`tabSales Invoice`
-			WHERE
-				customer={json.dumps(cust.get("customer"))} AND posting_date BETWEEN {from_date} and {to_date}'''
-		si_data = frappe.db.sql(f"{si_query}", as_dict=True)
-		if si_data:
-			cust_dict['si_data'] = si_data
+		presentation_currency = (
+			get_party_account_currency("Customer", cust.customer, psoa_doc.company)
+			or psoa_doc.currency
+			or get_company_currency(psoa_doc.company)
+		)
+		tax_id = frappe.get_doc("Customer", cust.customer).tax_id
+		filters = frappe._dict(
+			{
+				"from_date": psoa_doc.from_date,
+				"to_date": psoa_doc.to_date,
+				"company": psoa_doc.company,
+				"finance_book": psoa_doc.finance_book if psoa_doc.finance_book else None,
+				"account": [psoa_doc.account] if psoa_doc.account else None,
+				"party_type": "Customer",
+				"party": [cust.customer],
+				"presentation_currency": presentation_currency,
+				"group_by": psoa_doc.group_by,
+				"currency": psoa_doc.currency,
+				"cost_center": [cc.cost_center_name for cc in psoa_doc.cost_center],
+				"project": [p.project_name for p in psoa_doc.project],
+				"show_opening_entries": 0,
+				"include_default_book_entries": 0,
+				"tax_id": tax_id if tax_id else None,
+			}
+		)
+		col, res = get_soa(filters)
+
+		for x in [0, -2, -1]:
+			res[x]["account"] = res[x]["account"].replace("'", "")
+
+		if len(res) == 3:
+			continue
+
+		if res:
+			for re in res:
+				if re.get('voucher_type') and re.get('voucher_type') == 'Sales Invoice':
+					sales_invoice = frappe.db.get_value(re.get('voucher_type'), re.get('voucher_no'), ['due_date', 'po_no', 'total'], as_dict=1)
+					if sales_invoice.get('due_date'):
+						re['due_date'] = sales_invoice.get('due_date') if sales_invoice.get('due_date') else ''
+					if sales_invoice.get('po_no'):
+						re['po_no'] = sales_invoice.get('po_no') if sales_invoice.get('po_no') else ''
+					if sales_invoice.get('total'):
+						re['total'] = sales_invoice.get('total') if sales_invoice.get('total') else 0
+			cust_dict['data'] = res
+
 		cad_query = f'''
 			SELECT
 				ad.name,

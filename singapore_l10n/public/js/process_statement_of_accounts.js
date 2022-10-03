@@ -27,16 +27,16 @@ var set_html = function(frm, r) {
 				<br>
 			</div>
 			<div style="width: 50%; float: left;"> <b>${frm.doc.company}</b> <br>
-				${r.cod_data.address_line1?r.cod_data.address_line1:''}<br>
-				${r.cod_data.address_line2?r.cod_data.address_line2:''}<br>
-				${r.cod_data.city?r.cod_data.city:''} ${r.cod_data.pincode?r.cod_data.pincode:''}<br>
+				${(r.cod_data && r.cod_data.address_line1)?r.cod_data.address_line1:''}<br>
+				${(r.cod_data && r.cod_data.address_line2)?r.cod_data.address_line2:''}<br>
+				${(r.cod_data && r.cod_data.city)?r.cod_data.city:''} ${(r.cod_data && r.cod_data.pincode)?r.cod_data.pincode:''}<br>
 				Company Registration No: <br>
 				GST Registration No:
 			</div>
 			<div style="margin-left: 40%;"><br><br><br>
-				Tel : ${r.cod_data.phone?r.cod_data.phone:''}<br>
-				Fax : ${r.cod_data.fax?r.cod_data.fax:''}<br>
-				Email : ${r.cod_data.email_id?r.cod_data.email_id:''}
+				Tel : ${(r.cod_data && r.cod_data.phone)?r.cod_data.phone:''}<br>
+				Fax : ${(r.cod_data && r.cod_data.fax)?r.cod_data.fax:''}<br>
+				Email : ${(r.cod_data && r.cod_data.email_id)?r.cod_data.email_id:''}
 			</div>
 		</div>`
 		if (r.cust) {
@@ -56,16 +56,16 @@ var set_html = function(frm, r) {
 				: <br>
 			</div>
 			<div style="width: 49%; float: left;">
-				${cu.cad_data.customer?cu.cad_data.customer:''}<br>
-				${cu.cad_data.address_line1?cu.cad_data.address_line1:''}<br>
-				${cu.cad_data.address_line2?cu.cad_data.address_line2:''}<br>
-				${cu.cad_data.city?cu.cad_data.city:''} ${cu.cad_data.pincode?cu.cad_data.pincode:''}<br><br><br>
+				${(cu.cad_data && cu.cad_data.customer)?cu.cad_data.customer:''}<br>
+				${(cu.cad_data && cu.cad_data.address_line1)?cu.cad_data.address_line1:''}<br>
+				${(cu.cad_data && cu.cad_data.address_line2)?cu.cad_data.address_line2:''}<br>
+				${(cu.cad_data && cu.cad_data.city)?cu.cad_data.city:''} ${(cu.cad_data && cu.cad_data.pincode)?cu.cad_data.pincode:''}<br><br><br>
 			</div>
 			<div style="margin-left: width:40%;">
 				Cust. Code : <br>
-				Tel : ${cu.cad_data.phone?cu.cad_data.phone:''}<br>
-				Fax : ${cu.cad_data.fax?cu.cad_data.fax:''}<br>
-				Credit Terms : ${cu.cad_data.payment_terms?cu.cad_data.payment_terms:''}<br>
+				Tel : ${(cu.cad_data && cu.cad_data.phone)?cu.cad_data.phone:''}<br>
+				Fax : ${(cu.cad_data && cu.cad_data.fax)?cu.cad_data.fax:''}<br>
+				Credit Terms : ${(cu.cad_data && cu.cad_data.payment_terms)?cu.cad_data.payment_terms:''}<br>
 				Sales Code : <br>
 			</div>
 		</div>
@@ -89,19 +89,23 @@ var set_html = function(frm, r) {
 		</thead>
 		<tbody>
 		<b><br>CURRENCY : </b>`
-		if (cu.si_data) {
-			$.each(cu.si_data, function(i, val) {
-				html += `<tr>
-					<td style="width: 5%">${i+1}</td>
-					<td style="width: 15%">${val.name}</td>
-					<td style="width: 20%">${val.po_no?val.po_no:''}</td>
-					<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
-					<td style="width: 12%">${val.due_date?val.due_date:''}</td>
-					<td style="width: 12%">${val.total?val.total:''}</td>
-					<td style="width: 12%"></td>
-					<td style="width: 12%"></td>
-					<td style="width: 10%"></td>
-				</tr>`
+		if (cu.data) {
+			var idx = 1;
+			$.each(cu.data, function(i, val) {
+				if (val.voucher_no) {
+					html += `<tr>
+						<td style="width: 5%">${idx}</td>
+						<td style="width: 15%">${val.voucher_no?val.voucher_no:''}</td>
+						<td style="width: 20%">${val.po_no?val.po_no:''}</td>
+						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
+						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
+						<td style="width: 12%">${val.total?val.total:''}</td>
+						<td style="width: 12%">${val.debit?val.debit:0}</td>
+						<td style="width: 12%">${val.credit?val.credit:0}</td>
+						<td style="width: 10%">${val.balance?val.balance:0}</td>
+					</tr>`
+				idx += 1
+				}
 			})
 		}
 		html += `</tbody>
@@ -119,12 +123,12 @@ var set_html = function(frm, r) {
 		</thead>
 		<tbody>
 			<tr>
-				<td>${cu.ageing.currency}</td>
-				<td>${cu.ageing.outstanding?cu.ageing.outstanding:''}</td>
-				<td>${cu.ageing.range1?cu.ageing.range1:''}</td>
-				<td>${cu.ageing.range2?cu.ageing.range2:''}</td>
-				<td>${cu.ageing.range3?cu.ageing.range3:''}</td>
-				<td>${cu.ageing.range4?cu.ageing.range4:''}</td>
+				<td>${(cu.ageing && cu.ageing.currency)?cu.ageing.currency:''}</td>
+				<td>${(cu.ageing && cu.ageing.outstanding)?cu.ageing.outstanding:''}</td>
+				<td>${(cu.ageing && cu.ageing.range1)?cu.ageing.range1:''}</td>
+				<td>${(cu.ageing && cu.ageing.range2)?cu.ageing.range2:''}</td>
+				<td>${(cu.ageing && cu.ageing.range3)?cu.ageing.range3:''}</td>
+				<td>${(cu.ageing && cu.ageing.range4)?cu.ageing.range4:''}</td>
 			</tr>
 		</tbody>
 	</table>`
