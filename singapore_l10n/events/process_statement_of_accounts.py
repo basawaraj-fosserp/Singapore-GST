@@ -72,6 +72,7 @@ def get_statements_of_account(name):
 				ad.phone,
 				ad.pincode,
 				cus.name as customer,
+				cus.customer_name as customer_name,
 				cus.payment_terms
 			FROM
 				tabAddress AS ad LEFT JOIN
