@@ -26,10 +26,10 @@ var set_html = function(frm, r) {
 			<div style="width: 10%; float: left;">
 				<br>
 			</div>
-			<div style="width: 50%; float: left;"> <b>${frm.doc.company}</b> <br>
+			<div style="width: 50%; float: left;"> <h3>${frm.doc.company}</h3> <br>
 				${(r.cod_data && r.cod_data.address_line1)?r.cod_data.address_line1:''}<br>
 				${(r.cod_data && r.cod_data.address_line2)?r.cod_data.address_line2:''}<br>
-				${(r.cod_data && r.cod_data.city)?r.cod_data.city:''} ${(r.cod_data && r.cod_data.pincode)?r.cod_data.pincode:''}<br>
+				${(r.cod_data && r.cod_data.city)?r.cod_data.city:''} ${(r.cod_data && r.cod_data.pincode)?r.cod_data.pincode:''}<br><br>
 				Company Registration No: <br>
 				GST Registration No:
 			</div>
@@ -56,16 +56,16 @@ var set_html = function(frm, r) {
 				: <br>
 			</div>
 			<div style="width: 49%; float: left;">
-				${(cu.cad_data && cu.cad_data.customer)?cu.cad_data.customer:''}<br>
+				${(cu.cad_data && cu.cad_data.customer_name)?cu.cad_data.customer_name:''}<br>
 				${(cu.cad_data && cu.cad_data.address_line1)?cu.cad_data.address_line1:''}<br>
 				${(cu.cad_data && cu.cad_data.address_line2)?cu.cad_data.address_line2:''}<br>
 				${(cu.cad_data && cu.cad_data.city)?cu.cad_data.city:''} ${(cu.cad_data && cu.cad_data.pincode)?cu.cad_data.pincode:''}<br><br><br>
 			</div>
 			<div style="margin-left: width:40%;">
-				Cust. Code : <br>
-				Tel : ${(cu.cad_data && cu.cad_data.phone)?cu.cad_data.phone:''}<br>
-				Fax : ${(cu.cad_data && cu.cad_data.fax)?cu.cad_data.fax:''}<br>
-				Credit Terms : ${(cu.cad_data && cu.cad_data.payment_terms)?cu.cad_data.payment_terms:''}<br>
+				Cust. Code : ${(cu.cad_data && cu.cad_data.customer)?cu.cad_data.customer:''}<br><br>
+				Tel : ${(cu.cad_data && cu.cad_data.phone)?cu.cad_data.phone:''}<br><br>
+				Fax : ${(cu.cad_data && cu.cad_data.fax)?cu.cad_data.fax:''}<br><br>
+				Credit Terms : ${(cu.cad_data && cu.cad_data.payment_terms)?cu.cad_data.payment_terms:''}<br><br>
 				Sales Code : <br>
 			</div>
 		</div>
@@ -81,7 +81,6 @@ var set_html = function(frm, r) {
 				<td style="width: 20%"><b>REFERENCE</b></td>
 				<td style="width: 12%"><b>DOCDATE</b></td>
 				<td style="width: 12%"><b>DUE DATE</b></td>
-				<td style="width: 12%"><b>ORIG. DOC AMOUNT</b></td>
 				<td style="width: 12%"><b>DEBIT</b></td>
 				<td style="width: 12%"><b>CREDIT</b></td>
 				<td style="width: 10%"><b>ACCUM. BALANCE</b></td>
@@ -97,9 +96,8 @@ var set_html = function(frm, r) {
 						<td style="width: 5%">${idx}</td>
 						<td style="width: 15%">${val.voucher_no?val.voucher_no:''}</td>
 						<td style="width: 20%">${val.po_no?val.po_no:''}</td>
-						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
-						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
-						<td style="width: 12%">${val.total?val.total:''}</td>
+						<td style="width: 15%">${val.posting_date?val.posting_date:''}</td>
+						<td style="width: 15%">${val.due_date?val.due_date:''}</td>
 						<td style="width: 12%">${val.debit?val.debit:0}</td>
 						<td style="width: 12%">${val.credit?val.credit:0}</td>
 						<td style="width: 10%">${val.balance?val.balance:0}</td>
