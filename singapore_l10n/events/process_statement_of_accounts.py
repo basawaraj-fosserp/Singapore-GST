@@ -136,4 +136,5 @@ def get_statements_of_account(name):
 	cod_data = frappe.db.sql(f"{cod_query}", as_dict=True)
 	if cod_data and cod_data[0]:
 		out_data['cod_data'] = cod_data[0]
+	out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
 	return out_data

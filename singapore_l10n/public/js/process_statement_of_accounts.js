@@ -23,17 +23,17 @@ var set_html = function(frm, r) {
 </style>
 	<div>
 		<div style="width: 100%; overflow: hidden;">
-			<div style="width: 10%; float: left;">
-				<br>
-			</div>
 			<div style="width: 50%; float: left;"> <h3>${frm.doc.company}</h3> <br>
 				${(r.cod_data && r.cod_data.address_line1)?r.cod_data.address_line1:''}<br>
 				${(r.cod_data && r.cod_data.address_line2)?r.cod_data.address_line2:''}<br>
 				${(r.cod_data && r.cod_data.city)?r.cod_data.city:''} ${(r.cod_data && r.cod_data.pincode)?r.cod_data.pincode:''}<br><br>
-				Company Registration No: <br>
-				GST Registration No:
+				Company Registration No:  ${r.tax_id?r.tax_id:''}<br>
+				GST Registration No: ${r.tax_id?r.tax_id:''}
 			</div>
-			<div style="margin-left: 40%;"><br><br><br>
+			<div style="width: 20%; float: right;">
+			<br>
+		</div>
+			<div style="margin-left: 30%; float: right;"><br><br><br>
 				Tel : ${(r.cod_data && r.cod_data.phone)?r.cod_data.phone:''}<br>
 				Fax : ${(r.cod_data && r.cod_data.fax)?r.cod_data.fax:''}<br>
 				Email : ${(r.cod_data && r.cod_data.email_id)?r.cod_data.email_id:''}
@@ -55,17 +55,17 @@ var set_html = function(frm, r) {
 				: <br>
 				: <br>
 			</div>
-			<div style="width: 49%; float: left;">
+			<div style="width: 30%; float: left;">
 				${(cu.cad_data && cu.cad_data.customer_name)?cu.cad_data.customer_name:''}<br>
 				${(cu.cad_data && cu.cad_data.address_line1)?cu.cad_data.address_line1:''}<br>
 				${(cu.cad_data && cu.cad_data.address_line2)?cu.cad_data.address_line2:''}<br>
 				${(cu.cad_data && cu.cad_data.city)?cu.cad_data.city:''} ${(cu.cad_data && cu.cad_data.pincode)?cu.cad_data.pincode:''}<br><br><br>
 			</div>
-			<div style="margin-left: width:40%;">
-				Cust. Code : ${(cu.cad_data && cu.cad_data.customer)?cu.cad_data.customer:''}<br><br>
-				Tel : ${(cu.cad_data && cu.cad_data.phone)?cu.cad_data.phone:''}<br><br>
-				Fax : ${(cu.cad_data && cu.cad_data.fax)?cu.cad_data.fax:''}<br><br>
-				Credit Terms : ${(cu.cad_data && cu.cad_data.payment_terms)?cu.cad_data.payment_terms:''}<br><br>
+			<div style="margin-left: width:59%; float: right;">
+				Cust. Code : ${(cu.cad_data && cu.cad_data.customer)?cu.cad_data.customer:''}<br>
+				Tel : ${(cu.cad_data && cu.cad_data.phone)?cu.cad_data.phone:''}<br>
+				Fax : ${(cu.cad_data && cu.cad_data.fax)?cu.cad_data.fax:''}<br>
+				Credit Terms : ${(cu.cad_data && cu.cad_data.payment_terms)?cu.cad_data.payment_terms:''}<br>
 				Sales Code : <br>
 			</div>
 		</div>
@@ -77,13 +77,13 @@ var set_html = function(frm, r) {
 		<thead>
 			<tr>
 				<td style="width: 5%"><b>No.</b></td>
-				<td style="width: 15%"><b>Doc NO</b></td>
-				<td style="width: 20%"><b>REFERENCE</b></td>
+				<td style="width: 20%"><b>Doc NO</b></td>
+				<td style="width: 15%"><b>REFERENCE</b></td>
 				<td style="width: 12%"><b>DOCDATE</b></td>
 				<td style="width: 12%"><b>DUE DATE</b></td>
-				<td style="width: 12%"><b>DEBIT</b></td>
-				<td style="width: 12%"><b>CREDIT</b></td>
-				<td style="width: 10%"><b>ACCUM. BALANCE</b></td>
+				<td style="width: 10%"><b>DEBIT</b></td>
+				<td style="width: 10%"><b>CREDIT</b></td>
+				<td style="width: 14%"><b>ACCUM. BALANCE</b></td>
 			</tr>
 		</thead>
 		<tbody>
@@ -94,13 +94,13 @@ var set_html = function(frm, r) {
 				if (val.voucher_no) {
 					html += `<tr>
 						<td style="width: 5%">${idx}</td>
-						<td style="width: 15%">${val.voucher_no?val.voucher_no:''}</td>
-						<td style="width: 20%">${val.po_no?val.po_no:''}</td>
-						<td style="width: 15%">${val.posting_date?val.posting_date:''}</td>
-						<td style="width: 15%">${val.due_date?val.due_date:''}</td>
-						<td style="width: 12%">${val.debit?val.debit:0}</td>
-						<td style="width: 12%">${val.credit?val.credit:0}</td>
-						<td style="width: 10%">${val.balance?val.balance:0}</td>
+						<td style="width: 20%">${val.voucher_no?val.voucher_no:''}</td>
+						<td style="width: 15%">${val.po_no?val.po_no:''}</td>
+						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
+						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
+						<td style="width: 10%">${val.debit?val.debit:0}</td>
+						<td style="width: 10%">${val.credit?val.credit:0}</td>
+						<td style="width: 14%">${val.balance?format_currency(val.balance):0}</td>
 					</tr>`
 				idx += 1
 				}
