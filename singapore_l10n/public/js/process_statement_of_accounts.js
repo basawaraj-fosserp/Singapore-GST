@@ -33,7 +33,7 @@ var set_html = function(frm, r) {
 			<div style="width: 10%; float: right;">
 			<br>
 		</div>
-			<div style="margin-left: 25%; float: left;"><br><br><br>
+			<div style="margin-left: 25%; float: right;"><br><br><br>
 				Tel : ${(r.cod_data && r.cod_data.phone)?r.cod_data.phone:''}<br>
 				Fax : ${(r.cod_data && r.cod_data.fax)?r.cod_data.fax:''}<br>
 				Email : ${(r.cod_data && r.cod_data.email_id)?r.cod_data.email_id:''}
