@@ -99,7 +99,7 @@ var set_html = function(frm, r) {
 						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
 						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
 						<td style="width: 10%">${val.debit?val.debit:0}</td>
-						<td style="width: 10%">${val.credit?val.credit:0}</td>
+						<td style="width: 10%">${val.credit?Math.round(((val.credit)+Number.EPSILON)*100)/100:0}</td>
 						<td style="width: 14%">${val.balance?format_currency(val.balance):0}</td>
 					</tr>`
 				idx += 1
