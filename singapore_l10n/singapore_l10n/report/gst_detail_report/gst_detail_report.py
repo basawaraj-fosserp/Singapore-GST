@@ -75,7 +75,7 @@ def get_data(filters = None):
 	out_data = []
 	from_date = filters.get('from_date')
 	to_date = filters.get('to_date')
-	sgst_details = frappe.db.get_all('SGST Detail', {'parent': 'Singapore GST Settings', 'company':filters.company}, ['box_1', 'box_2', 'box_3', 'box_5', 'bank_interest_income', 'realised_exchange_gainloss'])
+	sgst_details = frappe.db.get_all('SGST Detail', {'parent': 'Singapore GST Settings', 'company':filters.company}, ['box_1', 'box_2', 'box_3', 'box_5','box_5_1','box_5_2','box_5_3', 'bank_interest_income', 'realised_exchange_gainloss'])
 	if sgst_details and (sgst_details[0].get('box_1') or sgst_details[0].get('box_2') or sgst_details[0].get('box_3')
 		or sgst_details[0].get('bank_interest_income') or sgst_details[0].get('realised_exchange_gainloss')):
 		jv_query = f'''
