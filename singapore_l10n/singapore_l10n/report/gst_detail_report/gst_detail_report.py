@@ -236,7 +236,7 @@ def get_data(filters = None):
 			`tabPurchase Taxes and Charges` AS pt
 		WHERE
 			pt.parent=p.name AND p.docstatus = 1 AND pt.parenttype = "Purchase Invoice" AND
-			pt.account_head = "{sgst_details[0].get('box_5')}"'''
+			pt.account_head in ("{sgst_details[0].get('box_5')}" , "{sgst_details[0].get('box_5_1')}" , "{sgst_details[0].get('box_5_2')}" , "{sgst_details[0].get('box_5_3')}")'''
 
 		if filters.company:
 			query = f'''{pi_query} AND p.company="{filters.company}"'''
