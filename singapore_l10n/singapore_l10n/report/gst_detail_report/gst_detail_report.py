@@ -3,6 +3,7 @@
 import frappe
 from frappe import _
 import json
+import itertools 
 
 def execute(filters=None):
 	columns = get_columns(filters)
@@ -220,6 +221,16 @@ def get_data(filters = None):
 		out_data = box_1 + box_1_total_line + box_2 + box_2_total_line + box_3 + box_3_total_line
 		out_data = out_data + [{'transaction_type':'<b>Box 4 Total (Box 1, Box 2, Box 3)</b>', 'heading':1, 'amount':total}]
 
+		pii_data = frappe.db.sql(f""" Select pii.name, pit.tax_type , pii.parent , sum(pii.amount) as amount
+										From `tabPurchase Invoice Item` as pii
+										left join `tabItem Tax Template Detail` as pit ON pit.parent = pii.item_tax_template
+										where pii.docstatus = 1 
+										Group by pii.parent , pit.tax_type""",as_dict =1)
+
+		pii_data_map = {}
+		for row in pii_data:
+			pii_data_map[(row.parent , row.tax_type)] = row 
+
 		pi_query = f'''
 		SELECT
 			p.posting_date AS date,
@@ -255,6 +266,20 @@ def get_data(filters = None):
 		purchase_row_without_gst = []
 		purchase_invoice_with_tax = []
 		purchase_invoice_with_tax_total = 0
+
+		key_func = lambda x: x['name'] 
+		key_finction = lambda x: x['gst_code']
+		final_p_sql_data = []
+		for key, group in itertools.groupby(p_sql_data, key_func): 
+			a_group = list(group)
+			for key, group in itertools.groupby(a_group, key_finction): 
+				b_group = list(group)
+				if pii_data_map.get((b_group[0].get('name') , b_group[0].get('gst_code'))):
+					final_p_sql_data.append(b_group[0].update({'amount':pii_data_map[(b_group[0].get('name') , b_group[0].get('gst_code'))].get('amount')}))
+				else:
+					final_p_sql_data += b_group
+					
+		p_sql_data = final_p_sql_data
 		if p_sql_data:
 			out_data = out_data + [{'transaction_type':'Box 5 Total value of taxable purchases (excluding GST)', 'heading':1}]
 			cp_sqldata = p_sql_data.copy()
@@ -274,6 +299,7 @@ def get_data(filters = None):
 				p_total = p_total + cp_dict.get('amount')
 			box_5[0]['amount'] = p_total
 			out_data = out_data+purchase_row_without_gst+box_5
+		
 		if sales_invoice_with_tax:
 			out_data = out_data + [{'transaction_type':'Box 6 Output tax due', 'heading':1}] + sales_invoice_with_tax + \
 			[{'transaction_type':'<b>Total for Box 6 Output tax due</b>', 'heading':1, 'amount':sales_invoice_with_tax_total}]
