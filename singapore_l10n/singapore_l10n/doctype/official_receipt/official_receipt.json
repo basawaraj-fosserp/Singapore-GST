@@ -70,7 +70,7 @@
   }
  ],
  "links": [],
- "modified": "2024-03-22 12:25:21.592778",
+ "modified": "2024-04-20 12:34:32.294786",
  "modified_by": "Administrator",
  "module": "Singapore L10N",
  "name": "Official Receipt",
@@ -102,6 +102,7 @@
    "write": 1
   }
  ],
+ "read_only": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

@@ -3,6 +3,7 @@ import json
 from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_summary import (
 	execute as get_ageing,
 )
+from frappe.utils import getdate, money_in_words
 from erpnext import get_company_currency
 from erpnext.accounts.party import get_party_account_currency
 from erpnext.accounts.report.general_ledger.general_ledger import execute as get_soa
@@ -71,6 +72,7 @@ def get_statements_of_account(name):
 				ad.email_id,
 				ad.phone,
 				ad.pincode,
+				ad.country,
 				cus.name as customer,
 				cus.customer_name as customer_name,
 				cus.payment_terms
@@ -79,8 +81,7 @@ def get_statements_of_account(name):
 				`tabDynamic Link` AS dl ON dl.parent=ad.name LEFT JOIN
 				tabCustomer AS cus ON dl.link_name=cus.name
 			WHERE
-				dl.link_doctype="Customer" AND dl.link_name={json.dumps(cust.get("customer"))}
-				AND ad.is_primary_address=1'''
+				dl.link_doctype="Customer" AND dl.link_name={json.dumps(cust.get("customer"))}'''
 		cad_data = frappe.db.sql(f"{cad_query}", as_dict=True)
 		if cad_data and cad_data[0]:
 			cust_dict['cad_data'] = cad_data[0]
@@ -112,12 +113,14 @@ def get_statements_of_account(name):
 				}
 			)
 			col1, ageing = get_ageing(ageing_filters)
-
 			if ageing:
 				ageing[0]["ageing_based_on"] = psoa_doc.ageing_based_on
 				cust_dict['ageing'] = ageing[0]
 			out_list.append(cust_dict)
 	out_data['cust'] = out_list
+	out_data['currency'] = psoa_doc.currency
+	out_data['to_date'] = frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY")
+	out_data['posting_date'] = frappe.utils.formatdate(getdate() , "dd MMM YYYY")
 	cod_query = f'''
 		SELECT
 			ad.name,
@@ -127,7 +130,8 @@ def get_statements_of_account(name):
 			ad.email_id,
 			ad.phone,
 			ad.pincode,
-			ad.fax
+			ad.fax,
+			ad.country
 		FROM
 			tabAddress AS ad LEFT JOIN
 			`tabDynamic Link` AS dl ON dl.parent=ad.name
@@ -137,4 +141,13 @@ def get_statements_of_account(name):
 	if cod_data and cod_data[0]:
 		out_data['cod_data'] = cod_data[0]
 	out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
+	if len(out_data['cust']):
+		out_data['cust'][0]['ageing']['outstanding_in_words'] = money_in_words(abs(out_data['cust'][0]['ageing']['outstanding']))
+		out_data['cust'][0]['ageing']['current_due'] = (out_data['cust'][0]['ageing']['outstanding'] -
+														out_data['cust'][0]['ageing']['range1'] -
+														out_data['cust'][0]['ageing']['range2'] -
+														out_data['cust'][0]['ageing']['range3'] -
+														out_data['cust'][0]['ageing']['range4'] -
+														out_data['cust'][0]['ageing']['range5'] 
+														)
 	return out_data
