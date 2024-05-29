@@ -7,7 +7,6 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 					'name': frm.doc.name
 				},
 				callback: function (r) {
-					console.log(r.message)
 					let p_html = set_html(frm, r.message)
 					frappe.render_pdf(p_html, {orientation:"Portrait"});
 				}
@@ -19,10 +18,11 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 
 
 var set_html = function(frm, r) {
-	let html = `
+	let style = `
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 	<style>
 .page-break    { display: block; page-break-before: always; }
+
 .lhead{
 	font-size:9px;
 	margin-top:0px;
@@ -77,13 +77,15 @@ var set_html = function(frm, r) {
 	}
 	
 	 
-</style>
-<div class="letter-head" id="htmlheader" style="padding-top:10px;">
-	<table class="letterhead" width="100%" >
+</style>`
+let header = `
+<div class="letter-head"  style="padding-top:10px;">
+	<div class="letter-head">
+	<table  width="100%" "class="letter-head">
 	<tbody>
 	   <tr>
 		  <td width="10%">
-			 <img height="60" src="/files/KGS-Logo.png" width="60">
+			<img height="60" src="/files/KGS-Logo.png" width="60">
 		  </td>
 		  <td width="21%">
 			 <p style="margin-bottom:0px !important; margin-top:0px;">
@@ -105,10 +107,13 @@ var set_html = function(frm, r) {
 		 </td>
 	</tr></tbody>
  </table>	
+ <div/>
 	<div/>
 	<hr>
 	<div>
 		`
+
+	let html = style + header
 	if (r.cust) {
 		$.each(r.cust, function(j, cu) {
 			html +=`
@@ -163,7 +168,33 @@ var set_html = function(frm, r) {
 						<td style="width: 10%" align="right">${val.credit?(format_currency((Number(Math.round((val.credit)+Number.EPSILON)*100)/100).toFixed(2)).replace('$','')):'-'}</td>
 						<td style="width: 14%" align="right">${val.balance?format_currency(val.balance):'-'}</td>
 					</tr>`
+				if (i % 30 == 0){
+					console.log('h')
+					html += `
+						</tbody>
+						</table>
+						<div class="page-break"></div>
+						`
+					html = html + header
+					html += `
+							<table class="table table-bordered"  style="font-size: 13px; border-spacing: 1px;">
+							<thead>
+								<tr>
+									<td style="width: 5%"><b>No.</b></td>
+									<td style="width: 20%"><b>Doc NO</b></td>
+									<td style="width: 12%"><b>DOCDATE</b></td>
+									<td style="width: 10%"><b>DUE DATE</b></td>
+									<td style="width: 10%" align="right"><b>DEBIT</b></td>
+									<td style="width: 10%" align="right"><b>CREDIT</b></td>
+									<td style="width: 14%" align="right"><b>ACCUM. BALANCE</b></td>
+								</tr>
+							</thead>
+							<tbody>
+							`
+					
+				}
 				idx += 1
+				
 				}
 			})
 			
@@ -209,6 +240,7 @@ var set_html = function(frm, r) {
 	if ((j+1)< r.cust.length) {
 		html += `
 			<div style="page-break-before: always;" class="pagebreak"></div>`
+		html += header
 	}
 	})
 	}

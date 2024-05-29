@@ -13,7 +13,6 @@ frappe.ui.form.on('Official Receipt', {
 					company: frm.doc.company
 				},
 				callback:function(r){
-					console.log(r.message)
 					let html = get_html(frm , r.message)
 					frappe.render_pdf(html, {orientation:"Portrait"});
 				}
