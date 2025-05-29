@@ -3,6 +3,7 @@ import json
 from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_summary import (
 	execute as get_ageing,
 )
+from frappe.utils import getdate, money_in_words
 from erpnext import get_company_currency
 from frappe.utils import getdate, money_in_words
 from erpnext.accounts.party import get_party_account_currency
@@ -118,7 +119,6 @@ def get_statements_of_account(name):
 				}
 			)
 			col1, ageing = get_ageing(ageing_filters)
-
 			if ageing:
 				ageing[0]["ageing_based_on"] = psoa_doc.ageing_based_on
 				cust_dict['ageing'] = ageing[0]

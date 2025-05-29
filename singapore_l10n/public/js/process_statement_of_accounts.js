@@ -15,6 +15,7 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 	}
 })
 
+
 var set_html = function(frm, r) {
 	let html = `
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -160,7 +161,33 @@ var set_html = function(frm, r) {
 						<td style="width: 10%" align="right">${val.credit?(format_currency((Number(Math.round((val.credit)+Number.EPSILON)*100)/100).toFixed(2)).replace('$','')):'-'}</td>
 						<td style="width: 14%" align="right">${val.balance?format_currency(val.balance):'-'}</td>
 					</tr>`
+				if (i % 30 == 0){
+					console.log('h')
+					html += `
+						</tbody>
+						</table>
+						<div class="page-break"></div>
+						`
+					html = html + header
+					html += `
+							<table class="table table-bordered"  style="font-size: 13px; border-spacing: 1px;">
+							<thead>
+								<tr>
+									<td style="width: 5%"><b>No.</b></td>
+									<td style="width: 20%"><b>Doc NO</b></td>
+									<td style="width: 12%"><b>DOCDATE</b></td>
+									<td style="width: 10%"><b>DUE DATE</b></td>
+									<td style="width: 10%" align="right"><b>DEBIT</b></td>
+									<td style="width: 10%" align="right"><b>CREDIT</b></td>
+									<td style="width: 14%" align="right"><b>ACCUM. BALANCE</b></td>
+								</tr>
+							</thead>
+							<tbody>
+							`
+					
+				}
 				idx += 1
+				
 				}
 			})
 			
@@ -206,6 +233,7 @@ var set_html = function(frm, r) {
 	if ((j+1)< r.cust.length) {
 		html += `
 			<div style="page-break-before: always;" class="pagebreak"></div>`
+		html += header
 	}
 	})
 	}
