@@ -8,86 +8,145 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 				},
 				callback: function (r) {
 					let p_html = set_html(frm, r.message)
-					frappe.render_pdf(p_html, {orientation:"Landscape"});
+					frappe.render_pdf(p_html, {orientation:"Portrait"});
 				}
 			});
-		});
-		
-		}
+		}).addClass("btn-primary");
+	}
 })
 
 var set_html = function(frm, r) {
 	let html = `
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 	<style>
 .page-break    { display: block; page-break-before: always; }
+.lhead{
+	font-size:9px;
+	margin-top:0px;
+	margin-bottom:0px !important;
+	vertical-align: top !important;
+	}
+	*{
+		font-family: 'IBM Plex Sans', sans-serif !important;
+	}
+	.print-format {
+		margin-left: 4mm;
+		margin-right: 4mm;	  
+	}
+	.new1{
+		border-top: 1px dotted !important;
+		}
+	.blhead{
+	font-weight:600 !important;
+	font-size:9px !important;
+	}
+	.print-format .letter-head {
+		margin-bottom: 0px;
+		}
+	.print-format .letterhead td, .print-format th {
+	padding: 1 1px 1 1px !important;
+	vertical-align: top !important;
+	margin:0px !important;
+	}
+	.print-format p{
+	margin:0px 0px 2px;
+	}
+	.print-format .letter-head {
+	margin-bottom: 0px;
+	}
+	
+	p{
+        font-size: 13px;
+    }
+	.address-sec{
+		margin-top:0px;
+		margin-bottom:0px !important;
+		vertical-align: text-top;
+	}
+	.left_dotted {
+		border-left: 2px dotted !important;
+	  }
+	.ontop{
+		border-top: 1px;
+	}
+	.onbottom{
+		border-bottom: 1px;;
+	}
+	
+	 
 </style>
+<div class="letter-head" id="htmlheader" style="padding-top:10px;">
+	<table class="letterhead" width="100%" >
+	<tbody>
+	   <tr>
+		  <td width="10%">
+			 <img height="60" src="/files/photo_2024-05-10_09-34-57.jpg" width="60">
+		  </td>
+		  <td width="21%">
+			 <p style="margin-bottom:0px !important; margin-top:0px;">
+			 	<b style="font-size:11px; margin-bottom:0px !important; margin-top:0px;">KG SOWERS GROUP PTE LTD</b>
+			 </p>
+			 <p class="lhead">2 GAMBAS CRESCENT,</p>
+			 <p class="lhead">#08-03/04 NORDCOM II, TOWER 1</p>
+			 <p class="lhead">Singapore 757044</p>
+		  </td>
+		  <td width="32%">
+			 <br>
+			 <p class="lhead"><b class="blhead">Web: </b>www.sowers.com.sg</p>
+			 <p class="lhead"><b class="blhead">UEN/GST No: </b> 201527820N</p>
+		  </td>
+		  <td align="centre">
+			 <b style="font-size: 20px; text-transform: uppercase;">
+			 Statement of Account 
+			  </b>
+		 </td>
+	</tr></tbody>
+ </table>	
+	<div/>
+	<hr>
 	<div>
-		<div style="width: 100%; overflow: hidden;">
-			<div style="width: 50%; float: left;"> <h3>${frm.doc.company}</h3> <br>
-				${(r.cod_data && r.cod_data.address_line1)?r.cod_data.address_line1:''}<br>
-				${(r.cod_data && r.cod_data.address_line2)?r.cod_data.address_line2:''}<br>
-				${(r.cod_data && r.cod_data.city)?r.cod_data.city:''} ${(r.cod_data && r.cod_data.pincode)?r.cod_data.pincode:''}<br><br>
-				Company Registration No:  ${r.tax_id?r.tax_id:''}<br>
-				GST Registration No: ${r.tax_id?r.tax_id:''}
-			</div>
-			<div style="width: 10%; float: right;">
-			<br>
-		</div>
-			<div style="margin-left: 25%; float: right;"><br><br><br>
-				Tel : ${(r.cod_data && r.cod_data.phone)?r.cod_data.phone:''}<br>
-				Fax : ${(r.cod_data && r.cod_data.fax)?r.cod_data.fax:''}<br>
-				Email : ${(r.cod_data && r.cod_data.email_id)?r.cod_data.email_id:''}
-			</div>
-		</div>`
-		if (r.cust) {
-			$.each(r.cust, function(j, cu) {
-				html +=`
-		<div>
-			<h2 style="text-align:center"> STATEMENT OF ACCOUNT </h2>
-			<h5 style="text-align:center"> AS AT ${frm.doc.to_date} </h5>
-		</div>
-		<div style="width: 100%; overflow: hidden;">
-			<div style="width: 10%; float: left;">
-				Customer <br>
-				Address	<br>
-			</div>
-			<div style="width: 1%; float: left;">
-				: <br>
-				: <br>
-			</div>
-			<div style="width: 30%; float: left;">
-				${(cu.cad_data && cu.cad_data.customer_name)?cu.cad_data.customer_name:''}<br>
-				${(cu.cad_data && cu.cad_data.address_line1)?cu.cad_data.address_line1:''}<br>
-				${(cu.cad_data && cu.cad_data.address_line2)?cu.cad_data.address_line2:''}<br>
-				${(cu.cad_data && cu.cad_data.city)?cu.cad_data.city:''} ${(cu.cad_data && cu.cad_data.pincode)?cu.cad_data.pincode:''}<br><br><br>
-			</div>
-			<div style="margin-left: width:59%; float: right;">
-				Cust. Code : ${(cu.cad_data && cu.cad_data.customer)?cu.cad_data.customer:''}<br>
-				Tel : ${(cu.cad_data && cu.cad_data.phone)?cu.cad_data.phone:''}<br>
-				Fax : ${(cu.cad_data && cu.cad_data.fax)?cu.cad_data.fax:''}<br>
-				Credit Terms : ${(cu.cad_data && cu.cad_data.payment_terms)?cu.cad_data.payment_terms:''}<br>
-				Sales Code : <br>
-			</div>
-		</div>
-		<div style="float: left;"> Attention: ${(cu.cco_data && cu.cco_data.first_name)?cu.cco_data.first_name:''} ${(cu.cco_data && cu.cco_data.middle_name)?cu.cco_data.middle_name:''} 
-				${(cu.cco_data && cu.cco_data.last_name)?cu.cco_data.last_name:''}
-		</div>
-		<br>
-		<table class="table table-bordered" style="font-size: 15px">
+		`
+	if (r.cust) {
+		$.each(r.cust, function(j, cu) {
+			html +=`
+	
+		<table width="100%" class="cust_head">
+	<tbody>
+		<tr>
+			<td>
+			<p class="address-sec">${(cu.cad_data && cu.cad_data.customer_name)?cu.cad_data.customer_name:''}</p>
+			<p class="address-sec">${(cu.cad_data && cu.cad_data.address_line1)?cu.cad_data.address_line1:''}</p>
+			<p class="address-sec">${(cu.cad_data && cu.cad_data.address_line2)?cu.cad_data.address_line2:''}</p>
+			<p class="address-sec">${(cu.cad_data && cu.cad_data.city)?cu.cad_data.city:''} ${(cu.cad_data && cu.cad_data.pincode)?cu.cad_data.pincode:''}</p>
+			<p class="address-sec">${(cu.cad_data && cu.cad_data.country)?cu.cad_data.country:''}</p>
+			</td>
+			<td>
+				<p class="address-sec">Currency : ${r.currency ? r.currency : ''}</p>
+				<p class="address-sec">Payment Terms : C.O.D</p>
+				<p class="address-sec">Total Due : ${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):''}</p>
+			</td>
+			<td class="left_dotted">
+				<p class="address-sec" style="padding-left:10px;">Statement No.: ${frm.doc.name}</p>
+				<p class="address-sec" style="padding-left:10px;">Date.: ${r.posting_date} </p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<hr class="new1">
+		<table class="table table-bordered"  style="font-size: 13px; border-spacing: 1px;">
 		<thead>
 			<tr>
 				<td style="width: 5%"><b>No.</b></td>
 				<td style="width: 20%"><b>Doc NO</b></td>
-				<td style="width: 15%"><b>REFERENCE</b></td>
 				<td style="width: 12%"><b>DOCDATE</b></td>
-				<td style="width: 12%"><b>DUE DATE</b></td>
-				<td style="width: 10%"><b>DEBIT</b></td>
-				<td style="width: 10%"><b>CREDIT</b></td>
-				<td style="width: 14%"><b>ACCUM. BALANCE</b></td>
+				<td style="width: 10%"><b>DUE DATE</b></td>
+				<td style="width: 10%" align="right"><b>DEBIT</b></td>
+				<td style="width: 10%" align="right"><b>CREDIT</b></td>
+				<td style="width: 14%" align="right"><b>ACCUM. BALANCE</b></td>
 			</tr>
 		</thead>
 		<tbody>
-		<b><br>CURRENCY : </b>`
+		`
 		if (cu.data) {
 			var idx = 1;
 			$.each(cu.data, function(i, val) {
@@ -95,41 +154,55 @@ var set_html = function(frm, r) {
 					html += `<tr>
 						<td style="width: 5%">${idx}</td>
 						<td style="width: 20%">${val.voucher_no?val.voucher_no:''}</td>
-						<td style="width: 15%">${val.po_no?val.po_no:''}</td>
 						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
 						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
-						<td style="width: 10%">${val.debit?val.debit:0}</td>
-						<td style="width: 10%">${val.credit?Math.round(((val.credit)+Number.EPSILON)*100)/100:0}</td>
-						<td style="width: 14%">${val.balance?format_currency(val.balance):0}</td>
+						<td style="width: 10%" align="right">${val.debit?format_currency(val.debit.toFixed(2)).replace('$',''):'-'}</td>
+						<td style="width: 10%" align="right">${val.credit?(format_currency((Number(Math.round((val.credit)+Number.EPSILON)*100)/100).toFixed(2)).replace('$','')):'-'}</td>
+						<td style="width: 14%" align="right">${val.balance?format_currency(val.balance):'-'}</td>
 					</tr>`
 				idx += 1
 				}
 			})
+			
 		}
 		html += `</tbody>
-		</table><br>
-		<table class="table table-bordered" style="width: 100%">
+		</table>
+		
+		<div id="footer-html" class="visible-pdf letter-head-footer">
+		<table width="100%" class="table" >
+			<tbody>
+				<tr>
+					<td width="14%" class="ontop onbottom"><p><b>In Words:</b></p></td>
+					<td width="60%" class="ontop onbottom"><p>${cu.ageing.outstanding_in_words}</p></td>
+					<td width="12%" class="ontop onbottom"><p><b>Total Due</b>:</p></td>
+					<td width="14%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</p></td>
+				</tr>
+			</tbody>
+		</table>
+		<table class="table table-bordered" style="font-size: 13px; border-spacing: 0px;">
 		<thead>
 			<tr>
-				<td style="width: 16%"><b>AGEING SUMMARY IN</b></td>
-				<td style="width: 16%"><b>TOTAL</b></td>
-				<td style="width: 16%"><b>30 Days</b></td>
-				<td style="width: 16%"><b>60 Days</b></td>
-				<td style="width: 16%"><b>90 Days</b></td>
-				<td style="width: 16%"><b>120 Days</b></td>
+				<td style="width: 16%" align="center"><b>Current Due</b></td>
+				<td style="width: 16%" align="center"><b>1-30 Days</b></td>
+				<td style="width: 16%" align="center"><b>31-60 Days</b></td>
+				<td style="width: 16%" align="center"><b>61-90 Days</b></td>
+				<td style="width: 16%" align="center"><b>120+ Days</b></td>
+				<td style="width: 16%" align="center"><b>Amount Due</b></td>
 			</tr>
 		</thead>
 		<tbody>
 			<tr>
-				<td>${(cu.ageing && cu.ageing.currency)?cu.ageing.currency:''}</td>
-				<td>${(cu.ageing && cu.ageing.outstanding)?cu.ageing.outstanding:''}</td>
-				<td>${(cu.ageing && cu.ageing.range1)?cu.ageing.range1:''}</td>
-				<td>${(cu.ageing && cu.ageing.range2)?cu.ageing.range2:''}</td>
-				<td>${(cu.ageing && cu.ageing.range3)?cu.ageing.range3:''}</td>
-				<td>${(cu.ageing && cu.ageing.range4)?cu.ageing.range4:''}</td>
+				<td align="center">${(cu.ageing && cu.ageing.current_due)?format_currency(cu.ageing.current_due):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range1)?format_currency(cu.ageing.range1):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range2)?format_currency(cu.ageing.range2):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range3)?format_currency(cu.ageing.range3):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range4)?format_currency(cu.ageing.range4):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</td>
 			</tr>
 		</tbody>
-	</table>`
+	</table>
+	<center style="font-size: 8px;">THIS IS A COMPUTER GENERATED DOCUMENT. NO SIGNATURE IS REQUIRED. </center>
+	</div>`
 	if ((j+1)< r.cust.length) {
 		html += `
 			<div style="page-break-before: always;" class="pagebreak"></div>`
