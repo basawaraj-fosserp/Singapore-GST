@@ -62,11 +62,7 @@ def get_statements_of_account(name):
 						re['po_no'] = sales_invoice.get('po_no') if sales_invoice.get('po_no') else ''
 					if sales_invoice.get('total'):
 						re['total'] = sales_invoice.get('total') if sales_invoice.get('total') else 0
-			new_res = []
-			for row in res:
-				if row.get('voucher_type') != "Payment Entry":
-					new_res.append(row)
-			res = new_res
+			
 			cust_dict['data'] = res
 
 		cad_query = f'''
