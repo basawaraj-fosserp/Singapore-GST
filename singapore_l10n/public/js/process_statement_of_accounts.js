@@ -1,15 +1,22 @@
 frappe.ui.form.on('Process Statement Of Accounts', {
 	refresh(frm) {
 		frm.add_custom_button(__('Download SOA'), function(){
-			frappe.call({
-				"method": "singapore_l10n.events.process_statement_of_accounts.get_statements_of_account",
-				"args": {
-					'name': frm.doc.name
+			if (frm.is_dirty()) frappe.throw(__("Please save before proceeding."));
+			let url = frappe.urllib.get_full_url(
+				"/api/method/singapore_l10n.events.process_statement_of_accounts.get_statements_of_account?" +
+					"document_name=" +
+					encodeURIComponent(frm.doc.name)
+			);
+			$.ajax({
+				url: url,
+				type: "GET",
+				success: function (result) {
+					if (jQuery.isEmptyObject(result)) {
+						frappe.msgprint(__("No Records for these settings."));
+					} else {
+						window.location = url;
+					}
 				},
-				callback: function (r) {
-					let p_html = set_html(frm, r.message)
-					frappe.render_pdf(p_html, {orientation:"Portrait"});
-				}
 			});
 		}).addClass("btn-primary");
 	}
