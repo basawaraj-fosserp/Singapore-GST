@@ -5,11 +5,124 @@ from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_sum
 )
 from frappe.utils import getdate, money_in_words
 from erpnext import get_company_currency
+from frappe.www.printview import get_print_style
+from frappe.utils import getdate, money_in_words
 from erpnext.accounts.party import get_party_account_currency
 from erpnext.accounts.report.general_ledger.general_ledger import execute as get_soa
+from erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts import set_ageing, get_common_filters, get_ar_filters
+from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute as get_ar_soa
+from frappe.utils.pdf import get_pdf
+
 
 @frappe.whitelist()
-def get_statements_of_account(name):
+def get_statements_of_account(document_name):
+	doc = frappe.get_doc("Process Statement Of Accounts", document_name)
+	report = get_report_pdf(doc)
+	if report:
+		frappe.local.response.filename = doc.name + ".pdf"
+		frappe.local.response.filecontent = report
+		frappe.local.response.type = "download"
+
+def get_report_pdf(doc, consolidated=True):
+	statement_dict = get_statement_dict(doc)
+	if not bool(statement_dict):
+		return False
+	elif consolidated:
+		delimiter = '<div style="page-break-before: always;"></div>' if doc.include_break else ""
+		result = delimiter.join(list(statement_dict.values()))
+		return get_pdf(result, {"orientation": doc.orientation})
+	else:
+		for customer, statement_html in statement_dict.items():
+			statement_dict[customer] = get_pdf(statement_html, {"orientation": doc.orientation})
+		return statement_dict
+
+def get_statement_dict(doc, get_statement_dict=False):
+	statement_dict = {}
+	ageing = ""
+
+	for entry in doc.customers:
+		if doc.include_ageing:
+			ageing = set_ageing(doc, entry)
+
+		tax_id = frappe.get_doc("Customer", entry.customer).tax_id
+		presentation_currency = (
+			get_party_account_currency("Customer", entry.customer, doc.company)
+			or doc.currency
+			or get_company_currency(doc.company)
+		)
+
+		filters = get_common_filters(doc)
+		if doc.ignore_exchange_rate_revaluation_journals:
+			filters.update({"ignore_err": True})
+
+		if doc.ignore_cr_dr_notes:
+			filters.update({"ignore_cr_dr_notes": True})
+
+		if doc.report == "General Ledger":
+			filters.update(get_gl_filters(doc, entry, tax_id, presentation_currency))
+			col, res = get_soa(filters)
+			for x in [0, -2, -1]:
+				res[x]["account"] = res[x]["account"].replace("'", "")
+			if len(res) == 3:
+				continue
+		else:
+			filters.update(get_ar_filters(doc, entry))
+			ar_res = get_ar_soa(filters)
+			col, res = ar_res[0], ar_res[1]
+			outstading_list = []
+			if not res:
+				continue
+			else:
+				for row in res:
+					outstading_list.append(row.get("outstanding"))
+					row.update({"outstanding" : sum(outstading_list)})
+
+		statement_dict[entry.customer] = (
+			[res, ageing] if get_statement_dict else get_html(doc, filters, entry, col, res, ageing)
+		)
+
+	return statement_dict
+
+def get_html(doc, filters, entry, col, res, ageing):
+	base_template_path = "frappe/www/printview.html"
+	template_path = "singapore_l10n/events/process_statement_of_accounts_accounts_receivable.html"
+	if doc.report == "General Ledger":
+		template_path = (
+			"erpnext/accounts/doctype/process_statement_of_accounts/process_statement_of_accounts.html"
+		)
+
+	process_soa_html = frappe.get_hooks("process_soa_html")
+	# fetching custom print format for Process Statement of Accounts
+	if process_soa_html and process_soa_html.get(doc.report):
+		template_path = process_soa_html[doc.report][-1]
+
+	if doc.letter_head:
+		from frappe.www.printview import get_letter_head
+
+		letter_head = get_letter_head(doc, 0)
+	html = frappe.render_template(
+		template_path,
+		{
+			"filters": filters,
+			"data": res,
+			"report": {"report_name": doc.report, "columns": col},
+			"ageing": ageing[0] if (doc.include_ageing and ageing) else None,
+			"letter_head": letter_head if doc.letter_head else None,
+			"terms_and_conditions": frappe.db.get_value(
+				"Terms and Conditions", doc.terms_and_conditions, "terms"
+			)
+			if doc.terms_and_conditions
+			else None,
+		},
+	)
+	html = frappe.render_template(
+		base_template_path,
+		{"body": html, "css": get_print_style(), "title": "Statement For " + entry.customer},
+	)
+	return html
+
+@frappe.whitelist()
+def get_statements_of_account_from_gl(name):
 	name = frappe.form_dict.name
 	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
 	from_date = json.dumps(psoa_doc.get('from_date'), default=str)
@@ -43,6 +156,8 @@ def get_statements_of_account(name):
 				"tax_id": tax_id if tax_id else None,
 			}
 		)
+
+		data = get_statement_dict(psoa_doc, get_statement_dict=True)
 		col, res = get_soa(filters)
 
 		for x in [0, -2, -1]:
@@ -61,6 +176,7 @@ def get_statements_of_account(name):
 						re['po_no'] = sales_invoice.get('po_no') if sales_invoice.get('po_no') else ''
 					if sales_invoice.get('total'):
 						re['total'] = sales_invoice.get('total') if sales_invoice.get('total') else 0
+			
 			cust_dict['data'] = res
 
 		cad_query = f'''

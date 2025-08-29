@@ -1,28 +1,33 @@
 frappe.ui.form.on('Process Statement Of Accounts', {
 	refresh(frm) {
 		frm.add_custom_button(__('Download SOA'), function(){
-			frappe.call({
-				"method": "singapore_l10n.events.process_statement_of_accounts.get_statements_of_account",
-				"args": {
-					'name': frm.doc.name
+			if (frm.is_dirty()) frappe.throw(__("Please save before proceeding."));
+			let url = frappe.urllib.get_full_url(
+				"/api/method/singapore_l10n.events.process_statement_of_accounts.get_statements_of_account?" +
+					"document_name=" +
+					encodeURIComponent(frm.doc.name)
+			);
+			$.ajax({
+				url: url,
+				type: "GET",
+				success: function (result) {
+					if (jQuery.isEmptyObject(result)) {
+						frappe.msgprint(__("No Records for these settings."));
+					} else {
+						window.location = url;
+					}
 				},
-				callback: function (r) {
-					let p_html = set_html(frm, r.message)
-					frappe.render_pdf(p_html, {orientation:"Portrait"});
-				}
 			});
-		});
-		frm.remove_custom_button(__("Download"))
-		}
+		}).addClass("btn-primary");
+	}
 })
 
 
 var set_html = function(frm, r) {
-	let style = `
+	let html = `
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 	<style>
 .page-break    { display: block; page-break-before: always; }
-
 .lhead{
 	font-size:9px;
 	margin-top:0px;
@@ -77,28 +82,26 @@ var set_html = function(frm, r) {
 	}
 	
 	 
-</style>`
-let header = `
-<div class="letter-head"  style="padding-top:10px;">
-	<div class="letter-head">
-	<table  width="100%" "class="letter-head">
+</style>
+<div class="letter-head" id="htmlheader" style="padding-top:10px;">
+	<table class="letterhead" width="100%" >
 	<tbody>
 	   <tr>
 		  <td width="10%">
-			<img height="60" src="/files/KGS-Logo.png" width="60">
+			 <img height="60" src="/files/photo_2024-05-10_09-34-57.jpg" width="60">
 		  </td>
 		  <td width="21%">
 			 <p style="margin-bottom:0px !important; margin-top:0px;">
-			 	<b style="font-size:11px; margin-bottom:0px !important; margin-top:0px;">KGS Pte Ltd</b>
+			 	<b style="font-size:11px; margin-bottom:0px !important; margin-top:0px;">KG SOWERS GROUP PTE LTD</b>
 			 </p>
-			 <p class="lhead">8 Tuas South Lane,</p>
-			 <p class="lhead">#01-71, Factory 4,</p>
-			 <p class="lhead">Singapore 637302</p>
+			 <p class="lhead">2 GAMBAS CRESCENT,</p>
+			 <p class="lhead">#08-03/04 NORDCOM II, TOWER 1</p>
+			 <p class="lhead">Singapore 757044</p>
 		  </td>
 		  <td width="32%">
 			 <br>
-			 <p class="lhead"><b class="blhead">Web:</b>kgs.com.sg</p>
-			 <p class="lhead"><b class="blhead">UEN/GST No:</b> 201607799N</p>
+			 <p class="lhead"><b class="blhead">Web: </b>www.sowers.com.sg</p>
+			 <p class="lhead"><b class="blhead">UEN/GST No: </b> 201527820N</p>
 		  </td>
 		  <td align="centre">
 			 <b style="font-size: 20px; text-transform: uppercase;">
@@ -107,13 +110,10 @@ let header = `
 		 </td>
 	</tr></tbody>
  </table>	
- <div/>
 	<div/>
 	<hr>
 	<div>
 		`
-
-	let html = style + header
 	if (r.cust) {
 		$.each(r.cust, function(j, cu) {
 			html +=`
