@@ -109,45 +109,47 @@ def get_statements_of_account(name):
 					"range2": 60,
 					"range3": 90,
 					"range4": 120,
-					"customer": cust.customer,
+					"party": [cust.customer],
+					"party_type" :"Customer"
 				}
 			)
 			col1, ageing = get_ageing(ageing_filters)
+
 			if ageing:
 				ageing[0]["ageing_based_on"] = psoa_doc.ageing_based_on
 				cust_dict['ageing'] = ageing[0]
 			out_list.append(cust_dict)
-	out_data['cust'] = out_list
-	out_data['currency'] = psoa_doc.currency
-	out_data['to_date'] = frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY")
-	out_data['posting_date'] = frappe.utils.formatdate(getdate() , "dd MMM YYYY")
-	cod_query = f'''
-		SELECT
-			ad.name,
-			ad.address_line1,
-			ad.address_line2,
-			ad.city,
-			ad.email_id,
-			ad.phone,
-			ad.pincode,
-			ad.fax,
-			ad.country
-		FROM
-			tabAddress AS ad LEFT JOIN
-			`tabDynamic Link` AS dl ON dl.parent=ad.name
-		WHERE
-			dl.link_doctype="Company" AND dl.link_name={json.dumps(psoa_doc.get("company"))}'''
-	cod_data = frappe.db.sql(f"{cod_query}", as_dict=True)
-	if cod_data and cod_data[0]:
-		out_data['cod_data'] = cod_data[0]
-	out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
-	if len(out_data['cust']):
-		out_data['cust'][0]['ageing']['outstanding_in_words'] = money_in_words(abs(out_data['cust'][0]['ageing']['outstanding']))
-		out_data['cust'][0]['ageing']['current_due'] = (out_data['cust'][0]['ageing']['outstanding'] -
-														out_data['cust'][0]['ageing']['range1'] -
-														out_data['cust'][0]['ageing']['range2'] -
-														out_data['cust'][0]['ageing']['range3'] -
-														out_data['cust'][0]['ageing']['range4'] -
-														out_data['cust'][0]['ageing']['range5'] 
-														)
+		out_data['cust'] = out_list
+		out_data['currency'] = psoa_doc.currency
+		out_data['to_date'] = frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY")
+		out_data['posting_date'] = frappe.utils.formatdate(getdate() , "dd MMM YYYY")
+		cod_query = f'''
+			SELECT
+				ad.name,
+				ad.address_line1,
+				ad.address_line2,
+				ad.city,
+				ad.email_id,
+				ad.phone,
+				ad.pincode,
+				ad.fax,
+				ad.country
+			FROM
+				tabAddress AS ad LEFT JOIN
+				`tabDynamic Link` AS dl ON dl.parent=ad.name
+			WHERE
+				dl.link_doctype="Company" AND dl.link_name={json.dumps(psoa_doc.get("company"))}'''
+		cod_data = frappe.db.sql(f"{cod_query}", as_dict=True)
+		if cod_data and cod_data[0]:
+			out_data['cod_data'] = cod_data[0]
+		out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
+		if len(out_data['cust']):
+			out_data['cust'][0]['ageing']['outstanding_in_words'] = money_in_words(abs(out_data['cust'][0]['ageing']['outstanding']))
+			out_data['cust'][0]['ageing']['current_due'] = (out_data['cust'][0]['ageing']['outstanding'] -
+															out_data['cust'][0]['ageing']['range1'] -
+															out_data['cust'][0]['ageing']['range2'] -
+															out_data['cust'][0]['ageing']['range3'] -
+															out_data['cust'][0]['ageing']['range4'] -
+															out_data['cust'][0]['ageing']['range5'] 
+															)
 	return out_data
