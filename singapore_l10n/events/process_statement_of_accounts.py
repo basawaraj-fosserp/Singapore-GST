@@ -6,7 +6,7 @@ from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_sum
 from frappe.utils import getdate, money_in_words
 from erpnext import get_company_currency
 from frappe.www.printview import get_print_style
-from frappe.utils import getdate, money_in_words
+from frappe.utils import getdate, money_in_words, today
 from erpnext.accounts.party import get_party_account_currency
 from erpnext.accounts.report.general_ledger.general_ledger import execute as get_soa
 from erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts import set_ageing, get_common_filters, get_ar_filters
@@ -55,9 +55,8 @@ def get_statement_dict(doc, get_statement_dict=False):
 		if doc.ignore_exchange_rate_revaluation_journals:
 			filters.update({"ignore_err": True})
 
-		if doc.ignore_cr_dr_notes:
-			filters.update({"ignore_cr_dr_notes": True})
-
+		# if doc.ignore_cr_dr_notes:
+		filters.update({"ignore_cr_dr_notes": True})
 		if doc.report == "General Ledger":
 			filters.update(get_gl_filters(doc, entry, tax_id, presentation_currency))
 			col, res = get_soa(filters)
@@ -122,13 +121,20 @@ def get_html(doc, filters, entry, col, res, ageing):
 	return html
 
 @frappe.whitelist()
-def get_statements_of_account_from_gl(name):
-	name = frappe.form_dict.name
+def get_statements_of_account_from_gl(name, is_from_customer = False):
+	if is_from_customer:
+		name = name
+	else:
+		name = frappe.form_dict.name
 	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
 	from_date = json.dumps(psoa_doc.get('from_date'), default=str)
 	to_date = json.dumps(psoa_doc.get('to_date'), default=str)
 	out_data = {}
 	out_list = []
+	if not psoa_doc.from_date:
+		psoa_doc.from_date = '2000-01-01'
+	if not psoa_doc.to_date:
+		psoa_doc.to_date = today()
 	for cust in psoa_doc.customers:
 		cust_dict = {}
 		presentation_currency = (
@@ -159,9 +165,13 @@ def get_statements_of_account_from_gl(name):
 
 		data = get_statement_dict(psoa_doc, get_statement_dict=True)
 		col, res = get_soa(filters)
-
-		for x in [0, -2, -1]:
-			res[x]["account"] = res[x]["account"].replace("'", "")
+		if data.get(cust.customer):
+			res = data.get(cust.customer)[0]
+		else:
+			frappe.throw("Data not found for this customer.")
+		
+		# for x in [0, -2, -1]:
+		# 	res[x]["account"] = res[x]["account"].replace("'", "")
 
 		if len(res) == 3:
 			continue
@@ -176,7 +186,6 @@ def get_statements_of_account_from_gl(name):
 						re['po_no'] = sales_invoice.get('po_no') if sales_invoice.get('po_no') else ''
 					if sales_invoice.get('total'):
 						re['total'] = sales_invoice.get('total') if sales_invoice.get('total') else 0
-			
 			cust_dict['data'] = res
 
 		cad_query = f'''
@@ -236,9 +245,9 @@ def get_statements_of_account_from_gl(name):
 				cust_dict['ageing'] = ageing[0]
 			out_list.append(cust_dict)
 		out_data['cust'] = out_list
-		out_data['currency'] = psoa_doc.currency
-		out_data['to_date'] = frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY")
-		out_data['posting_date'] = frappe.utils.formatdate(getdate() , "dd MMM YYYY")
+		out_data.update({'currency' : psoa_doc.currency })
+		out_data.update({'to_date' :  frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY") }) 
+		out_data.update({ 'posting_date' : frappe.utils.formatdate(getdate() , "dd MMM YYYY") }) 
 		cod_query = f'''
 			SELECT
 				ad.name,
@@ -268,4 +277,5 @@ def get_statements_of_account_from_gl(name):
 															out_data['cust'][0]['ageing']['range4'] -
 															out_data['cust'][0]['ageing']['range5'] 
 															)
+
 	return out_data
