@@ -173,7 +173,7 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 		# for x in [0, -2, -1]:
 		# 	res[x]["account"] = res[x]["account"].replace("'", "")
 
-		if len(res) == 3:
+		if psoa_doc.report == "General Ledger" and len(res) == 3:
 			continue
 
 		if res:
@@ -243,7 +243,7 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 			if ageing:
 				ageing[0]["ageing_based_on"] = psoa_doc.ageing_based_on
 				cust_dict['ageing'] = ageing[0]
-			out_list.append(cust_dict)
+		out_list.append(cust_dict)
 		out_data['cust'] = out_list
 		out_data.update({'currency' : psoa_doc.currency })
 		out_data.update({'to_date' :  frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY") }) 
@@ -268,7 +268,7 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 		if cod_data and cod_data[0]:
 			out_data['cod_data'] = cod_data[0]
 		out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
-		if len(out_data['cust']):
+		if len(out_data['cust']) and out_data['cust'][0].get('ageing'):
 			out_data['cust'][0]['ageing']['outstanding_in_words'] = money_in_words(abs(out_data['cust'][0]['ageing']['outstanding']))
 			out_data['cust'][0]['ageing']['current_due'] = (out_data['cust'][0]['ageing']['outstanding'] -
 															out_data['cust'][0]['ageing']['range1'] -

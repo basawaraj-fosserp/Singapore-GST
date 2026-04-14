@@ -206,7 +206,7 @@ let header = `
 			<tbody>
 				<tr>
 					<td width="14%" class="ontop onbottom"><p><b>In Words:</b></p></td>
-					<td width="58%" class="ontop onbottom"><p>${cu.ageing.outstanding_in_words}</p></td>
+					<td width="58%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding_in_words) ? cu.ageing.outstanding_in_words : ''}</p></td>
 					<td width="12%" class="ontop onbottom"><p><b>Total Due</b>:</p></td>
 					<td width="16%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</p></td>
 				</tr>
