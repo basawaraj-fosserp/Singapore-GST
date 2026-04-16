@@ -2,7 +2,7 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 	refresh(frm) {
 		frm.add_custom_button(__('Download SOA'), function(){
 			frappe.call({
-				"method": "singapore_l10n.events.process_statement_of_accounts.get_statements_of_account_from_gl",
+				"method": "singapore_l10n.events.process_statement_of_accounts.get_statements_of_account",
 				"args": {
 					'name': frm.doc.name
 				},
@@ -79,35 +79,35 @@ var set_html = function(frm, r) {
 	 
 </style>`
 let header = `
-<div class="letter-head"  style="padding-top:10px;">
-	<div class="letter-head">
-	<table  width="100%" "class="letter-head">
-	<tbody>
-	   <tr>
-		  <td width="10%">
-			<img height="60" src="/files/KGS-Logo.png" width="60">
-		  </td>
-		  <td width="21%">
-			 <p style="margin-bottom:0px !important; margin-top:0px;">
-			 	<b style="font-size:11px; margin-bottom:0px !important; margin-top:0px;">KGS Pte Ltd</b>
-			 </p>
-			 <p class="lhead">8 Tuas South Lane,</p>
-			 <p class="lhead">#01-71, Factory 4,</p>
-			 <p class="lhead">Singapore 637302</p>
-		  </td>
-		  <td width="32%">
-			 <br>
-			 <p class="lhead"><b class="blhead">Web:</b>kgs.com.sg</p>
-			 <p class="lhead"><b class="blhead">UEN/GST No:</b> 201607799N</p>
-		  </td>
-		  <td align="centre">
-			 <b style="font-size: 20px; text-transform: uppercase;">
-			 Statement of Account 
-			  </b>
-		 </td>
-	</tr></tbody>
- </table>	
- <div/>
+	<div class="letter-head"  style="padding-top:10px;">
+		<div class="letter-head">
+		<table  width="100%" "class="letter-head">
+		<tbody>
+		<tr>
+			<td width="10%">
+				<img height="60" src="/files/photo_2024-05-10_09-34-57.jpg" width="60">
+			</td>
+			<td width="21%">
+				<p style="margin-bottom:0px !important; margin-top:0px;">
+					<b style="font-size:11px; margin-bottom:0px !important; margin-top:0px;">KG SOWERS GROUP PTE LTD</b>
+				</p>
+				<p class="lhead">2 GAMBAS CRESCENT,</p>
+				<p class="lhead">#08-03/04 NORDCOM II, TOWER 1</p>
+				<p class="lhead">Singapore 757044</p>
+			</td>
+			<td width="32%">
+				<br>
+				<p class="lhead"><b class="blhead">Web: </b>www.sowers.com.sg</p>
+				<p class="lhead"><b class="blhead">UEN/GST No: </b> 201527820N</p>
+			</td>
+			<td align="centre">
+				<b style="font-size: 20px; text-transform: uppercase;">
+				Statement of Account 
+				</b>
+			</td>
+		</tr></tbody>
+	</table>	
+	<div/>
 	<div/>
 	<hr>
 	<div>
@@ -164,11 +164,12 @@ let header = `
 						<td style="width: 20%">${val.voucher_no?val.voucher_no:''}</td>
 						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
 						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
-						<td style="width: 10%" align="right">${val.invoiced?format_currency(val.invoiced.toFixed(2)).replace('$',''):'-'}</td>
-						<td style="width: 10%" align="right">${val.credit_note?(format_currency((Number(Math.round((val.credit_note)+Number.EPSILON)*100)/100).toFixed(2)).replace('$','')):'-'}</td>
-						<td style="width: 14%" align="right">${val.outstanding?format_currency(val.outstanding):'-'}</td>
+						<td style="width: 10%" align="right">${val.debit?format_currency(val.debit.toFixed(2)).replace('$',''):'-'}</td>
+						<td style="width: 10%" align="right">${val.credit?(format_currency((Number(Math.round((val.credit)+Number.EPSILON)*100)/100).toFixed(2)).replace('$','')):'-'}</td>
+						<td style="width: 14%" align="right">${val.balance?format_currency(val.balance):'-'}</td>
 					</tr>`
-				if (idx % 27 == 0){
+				if (i % 27 == 0){
+					console.log('h')
 					html += `
 						</tbody>
 						</table>
@@ -206,9 +207,11 @@ let header = `
 			<tbody>
 				<tr>
 					<td width="14%" class="ontop onbottom"><p><b>In Words:</b></p></td>
-					<td width="58%" class="ontop onbottom"><p>${cu.ageing.outstanding_in_words}</p></td>
+					<td width="60%" class="ontop onbottom">
+						<p>${cu.ageing ? cu.ageing.outstanding_in_words : '-'}</p>
+					</td>
 					<td width="12%" class="ontop onbottom"><p><b>Total Due</b>:</p></td>
-					<td width="16%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</p></td>
+					<td width="14%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</p></td>
 				</tr>
 			</tbody>
 		</table>

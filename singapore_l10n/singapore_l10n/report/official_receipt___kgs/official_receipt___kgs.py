@@ -22,22 +22,19 @@ def execute(filters=None):
 		{
 			'fieldname': 'party_type',
 			'label': _('Party Type'),
-			'fieldtype': 'Link',
-			'options':'Payment Entry',
+			'fieldtype': 'Data',
 			'width': 150
 		},
 		{
 			'fieldname': 'party',
 			'label': _('Party'),
-			'fieldtype': 'Link',
-			'options':'Payment Entry',
+			'fieldtype': 'Data',
 			'width': 150
 		},
 		{
 			'fieldname': 'reference_doctype',
 			'label': _('Reference Doctype'),
-			'fieldtype': 'Link',
-			'options':'Doctype',
+			'fieldtype': 'Data',
 			'width': 150
 		},
 		{

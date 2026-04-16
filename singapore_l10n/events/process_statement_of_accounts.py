@@ -1,140 +1,24 @@
+# /home/erevive/frappe-bench/apps/singapore_l10n/singapore_l10n/events/process_statement_of_accounts.py
 import frappe
 import json
+import base64
+import os
 from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_summary import (
 	execute as get_ageing,
 )
 from frappe.utils import getdate, money_in_words
 from erpnext import get_company_currency
-from frappe.www.printview import get_print_style
-from frappe.utils import getdate, money_in_words, today
 from erpnext.accounts.party import get_party_account_currency
 from erpnext.accounts.report.general_ledger.general_ledger import execute as get_soa
-from erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts import set_ageing, get_common_filters, get_ar_filters
-from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute as get_ar_soa
-from frappe.utils.pdf import get_pdf
-
 
 @frappe.whitelist()
-def get_statements_of_account(document_name):
-	doc = frappe.get_doc("Process Statement Of Accounts", document_name)
-	report = get_report_pdf(doc)
-	if report:
-		frappe.local.response.filename = doc.name + ".pdf"
-		frappe.local.response.filecontent = report
-		frappe.local.response.type = "download"
-
-def get_report_pdf(doc, consolidated=True):
-	statement_dict = get_statement_dict(doc)
-	if not bool(statement_dict):
-		return False
-	elif consolidated:
-		delimiter = '<div style="page-break-before: always;"></div>' if doc.include_break else ""
-		result = delimiter.join(list(statement_dict.values()))
-		return get_pdf(result, {"orientation": doc.orientation})
-	else:
-		for customer, statement_html in statement_dict.items():
-			statement_dict[customer] = get_pdf(statement_html, {"orientation": doc.orientation})
-		return statement_dict
-
-def get_statement_dict(doc, get_statement_dict=False):
-	statement_dict = {}
-	ageing = ""
-
-	for entry in doc.customers:
-		if doc.include_ageing:
-			ageing = set_ageing(doc, entry)
-
-		tax_id = frappe.get_doc("Customer", entry.customer).tax_id
-		presentation_currency = (
-			get_party_account_currency("Customer", entry.customer, doc.company)
-			or doc.currency
-			or get_company_currency(doc.company)
-		)
-
-		filters = get_common_filters(doc)
-		if doc.ignore_exchange_rate_revaluation_journals:
-			filters.update({"ignore_err": True})
-
-		# if doc.ignore_cr_dr_notes:
-		filters.update({"ignore_cr_dr_notes": True})
-		if doc.report == "General Ledger":
-			filters.update(get_gl_filters(doc, entry, tax_id, presentation_currency))
-			col, res = get_soa(filters)
-			for x in [0, -2, -1]:
-				res[x]["account"] = res[x]["account"].replace("'", "")
-			if len(res) == 3:
-				continue
-		else:
-			filters.update(get_ar_filters(doc, entry))
-			ar_res = get_ar_soa(filters)
-			col, res = ar_res[0], ar_res[1]
-			outstading_list = []
-			if not res:
-				continue
-			else:
-				for row in res:
-					outstading_list.append(row.get("outstanding"))
-					row.update({"outstanding" : sum(outstading_list)})
-
-		statement_dict[entry.customer] = (
-			[res, ageing] if get_statement_dict else get_html(doc, filters, entry, col, res, ageing)
-		)
-
-	return statement_dict
-
-def get_html(doc, filters, entry, col, res, ageing):
-	base_template_path = "frappe/www/printview.html"
-	template_path = "singapore_l10n/events/process_statement_of_accounts_accounts_receivable.html"
-	if doc.report == "General Ledger":
-		template_path = (
-			"erpnext/accounts/doctype/process_statement_of_accounts/process_statement_of_accounts.html"
-		)
-
-	process_soa_html = frappe.get_hooks("process_soa_html")
-	# fetching custom print format for Process Statement of Accounts
-	if process_soa_html and process_soa_html.get(doc.report):
-		template_path = process_soa_html[doc.report][-1]
-
-	if doc.letter_head:
-		from frappe.www.printview import get_letter_head
-
-		letter_head = get_letter_head(doc, 0)
-	html = frappe.render_template(
-		template_path,
-		{
-			"filters": filters,
-			"data": res,
-			"report": {"report_name": doc.report, "columns": col},
-			"ageing": ageing[0] if (doc.include_ageing and ageing) else None,
-			"letter_head": letter_head if doc.letter_head else None,
-			"terms_and_conditions": frappe.db.get_value(
-				"Terms and Conditions", doc.terms_and_conditions, "terms"
-			)
-			if doc.terms_and_conditions
-			else None,
-		},
-	)
-	html = frappe.render_template(
-		base_template_path,
-		{"body": html, "css": get_print_style(), "title": "Statement For " + entry.customer},
-	)
-	return html
-
-@frappe.whitelist()
-def get_statements_of_account_from_gl(name, is_from_customer = False):
-	if is_from_customer:
-		name = name
-	else:
-		name = frappe.form_dict.name
+def get_statements_of_account(name):
+	name = frappe.form_dict.name
 	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
 	from_date = json.dumps(psoa_doc.get('from_date'), default=str)
 	to_date = json.dumps(psoa_doc.get('to_date'), default=str)
 	out_data = {}
 	out_list = []
-	if not psoa_doc.from_date:
-		psoa_doc.from_date = '2000-01-01'
-	if not psoa_doc.to_date:
-		psoa_doc.to_date = today()
 	for cust in psoa_doc.customers:
 		cust_dict = {}
 		presentation_currency = (
@@ -162,16 +46,10 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 				"tax_id": tax_id if tax_id else None,
 			}
 		)
-
-		data = get_statement_dict(psoa_doc, get_statement_dict=True)
 		col, res = get_soa(filters)
-		if data.get(cust.customer):
-			res = data.get(cust.customer)[0]
-		else:
-			frappe.throw("Data not found for this customer.")
-		
-		# for x in [0, -2, -1]:
-		# 	res[x]["account"] = res[x]["account"].replace("'", "")
+
+		for x in [0, -2, -1]:
+			res[x]["account"] = res[x]["account"].replace("'", "")
 
 		if len(res) == 3:
 			continue
@@ -234,48 +112,52 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 					"range2": 60,
 					"range3": 90,
 					"range4": 120,
-					"party": [cust.customer],
-					"party_type" :"Customer"
+					"customer": cust.customer,
 				}
 			)
 			col1, ageing = get_ageing(ageing_filters)
-
 			if ageing:
 				ageing[0]["ageing_based_on"] = psoa_doc.ageing_based_on
 				cust_dict['ageing'] = ageing[0]
 			out_list.append(cust_dict)
-		out_data['cust'] = out_list
-		out_data.update({'currency' : psoa_doc.currency })
-		out_data.update({'to_date' :  frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY") }) 
-		out_data.update({ 'posting_date' : frappe.utils.formatdate(getdate() , "dd MMM YYYY") }) 
-		cod_query = f'''
-			SELECT
-				ad.name,
-				ad.address_line1,
-				ad.address_line2,
-				ad.city,
-				ad.email_id,
-				ad.phone,
-				ad.pincode,
-				ad.fax,
-				ad.country
-			FROM
-				tabAddress AS ad LEFT JOIN
-				`tabDynamic Link` AS dl ON dl.parent=ad.name
-			WHERE
-				dl.link_doctype="Company" AND dl.link_name={json.dumps(psoa_doc.get("company"))}'''
-		cod_data = frappe.db.sql(f"{cod_query}", as_dict=True)
-		if cod_data and cod_data[0]:
-			out_data['cod_data'] = cod_data[0]
-		out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
-		if len(out_data['cust']):
-			out_data['cust'][0]['ageing']['outstanding_in_words'] = money_in_words(abs(out_data['cust'][0]['ageing']['outstanding']))
-			out_data['cust'][0]['ageing']['current_due'] = (out_data['cust'][0]['ageing']['outstanding'] -
-															out_data['cust'][0]['ageing']['range1'] -
-															out_data['cust'][0]['ageing']['range2'] -
-															out_data['cust'][0]['ageing']['range3'] -
-															out_data['cust'][0]['ageing']['range4'] -
-															out_data['cust'][0]['ageing']['range5'] 
-															)
+	out_data['cust'] = out_list
+	out_data['currency'] = psoa_doc.currency
+	out_data['to_date'] = frappe.utils.formatdate(psoa_doc.to_date , "dd MMM YYYY")
+	out_data['posting_date'] = frappe.utils.formatdate(getdate() , "dd MMM YYYY")
+	cod_query = f'''
+		SELECT
+			ad.name,
+			ad.address_line1,
+			ad.address_line2,
+			ad.city,
+			ad.email_id,
+			ad.phone,
+			ad.pincode,
+			ad.fax,
+			ad.country
+		FROM
+			tabAddress AS ad LEFT JOIN
+			`tabDynamic Link` AS dl ON dl.parent=ad.name
+		WHERE
+			dl.link_doctype="Company" AND dl.link_name={json.dumps(psoa_doc.get("company"))}'''
+	cod_data = frappe.db.sql(f"{cod_query}", as_dict=True)
+	if cod_data and cod_data[0]:
+		out_data['cod_data'] = cod_data[0]
+	out_data['tax_id'] = frappe.db.get_value("Company", psoa_doc.company, "tax_id")
 
+	logo_path = os.path.join(frappe.get_site_path(), "public", "files", "KGS-Logo.png")
+	if os.path.exists(logo_path):
+		with open(logo_path, "rb") as f:
+			out_data['logo_base64'] = "data:image/png;base64," + base64.b64encode(f.read()).decode("utf-8")
+	else:
+		out_data['logo_base64'] = ""
+	if len(out_data['cust']) and out_data['cust'][0].get("ageing"):
+		out_data['cust'][0]['ageing']['outstanding_in_words'] = money_in_words(abs(out_data['cust'][0]['ageing']['outstanding']))
+		out_data['cust'][0]['ageing']['current_due'] = (out_data['cust'][0]['ageing']['outstanding'] -
+														out_data['cust'][0]['ageing']['range1'] -
+														out_data['cust'][0]['ageing']['range2'] -
+														out_data['cust'][0]['ageing']['range3'] -
+														out_data['cust'][0]['ageing']['range4'] -
+														out_data['cust'][0]['ageing']['range5'] 
+														)
 	return out_data
