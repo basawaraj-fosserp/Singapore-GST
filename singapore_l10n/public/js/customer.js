@@ -1,19 +1,44 @@
 frappe.ui.form.on('Customer', {
 	refresh(frm) {
 		frm.add_custom_button(__('Download SOA'), function(){
-            console.log(frm.doc.name)
-			frappe.call({
-				method: "singapore_l10n.events.customer.get_statements_of_account_for_customer",
-				args: {
-					name: frm.doc.name
-				},
-                freeze: true,
-			    freeze_message: __("Generating report ..."),
-				callback: function (r) {
-					let p_html = set_html(frm, r.message)
-					frappe.render_pdf(p_html, {orientation:"Portrait"});
+			let dialog = new frappe.ui.Dialog({
+				title: __('Select Date Range'),
+				fields: [
+					{
+						fieldname: 'from_date',
+						label: __('From Date'),
+						fieldtype: 'Date',
+						reqd: 1,
+						default: frappe.datetime.month_start()
+					},
+					{
+						fieldname: 'to_date',
+						label: __('To Date'),
+						fieldtype: 'Date',
+						reqd: 1,
+						default: frappe.datetime.get_today()
+					}
+				],
+				primary_action_label: __('Download'),
+				primary_action(values) {
+					dialog.hide();
+					frappe.call({
+						method: "singapore_l10n.events.customer.get_statements_of_account_for_customer",
+						args: {
+							name: frm.doc.name,
+							from_date: values.from_date,
+							to_date: values.to_date
+						},
+						freeze: true,
+						freeze_message: __("Generating report ..."),
+						callback: function (r) {
+							let p_html = set_html(frm, r.message)
+							frappe.render_pdf(p_html, {orientation:"Portrait"});
+						}
+					});
 				}
 			});
+			dialog.show();
 		});
 	}
 })

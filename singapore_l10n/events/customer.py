@@ -3,12 +3,12 @@ from frappe.utils import today
 
 
 @frappe.whitelist()
-def get_statements_of_account_for_customer(name):
+def get_statements_of_account_for_customer(name, from_date=None, to_date=None):
     psoa_doc = frappe.new_doc("Process Statement Of Accounts")
     psoa_doc.report = "Accounts Receivable"
     psoa_doc.posting_date = today()
-    psoa_doc.from_date = '2000-01-01'
-    psoa_doc.to_date = today()
+    psoa_doc.from_date = from_date or '2000-01-01'
+    psoa_doc.to_date = to_date or today()
     psoa_doc.append("customers", {
         'customer' : name
     })
