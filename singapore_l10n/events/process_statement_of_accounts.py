@@ -131,15 +131,18 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 		psoa_doc.from_date = '2000-01-01'
 	if not psoa_doc.to_date:
 		psoa_doc.to_date = today()
-	all_statement_data = get_statement_dict(psoa_doc, get_statement_dict=True)
+	if psoa_doc.report == "General Ledger":
+		all_statement_data = get_statement_dict(psoa_doc, get_statement_dict=True)
+	else:
+		all_statement_data = {}
+
 	for cust in psoa_doc.customers:
 		cust_dict = {}
-		if all_statement_data.get(cust.customer):
-			res = all_statement_data.get(cust.customer)[0]
-		else:
-			continue
 
 		if psoa_doc.report == "General Ledger":
+			if not all_statement_data.get(cust.customer):
+				continue
+			res = all_statement_data.get(cust.customer)[0]
 			if len(res) == 3:
 				continue
 			for row in res:
@@ -150,30 +153,30 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 					row.setdefault('due_date', '')
 			cust_dict['data'] = res
 		else:
-			if not res:
+			# Use GL to get all transactions (invoices + payments) within the date range
+			gl_filters = frappe._dict({
+				"company": psoa_doc.company,
+				"from_date": psoa_doc.from_date,
+				"to_date": psoa_doc.to_date,
+				"party_type": "Customer",
+				"party": [cust.customer],
+				"show_opening_entries": 1,
+				"include_default_book_entries": 0,
+				"group_by": "Group by Voucher (Consolidated)",
+			})
+			gl_col, gl_res = get_soa(gl_filters)
+
+			if not gl_res or len(gl_res) <= 3:
 				continue
 
-			# Fetch opening balance from GL for the AR rows
+			# First row is Opening, last two are totals — extract opening balance
 			opening_balance = 0.0
-			if psoa_doc.from_date:
-				gl_filters = frappe._dict({
-					"company": psoa_doc.company,
-					"from_date": psoa_doc.from_date,
-					"to_date": psoa_doc.to_date,
-					"party_type": "Customer",
-					"party": [cust.customer],
-					"show_opening_entries": 1,
-					"include_default_book_entries": 0,
-					"group_by": "Group by Voucher (Consolidated)",
-				})
-				gl_col, gl_res = get_soa(gl_filters)
-				# First row is always the Opening row
-				if gl_res and gl_res[0].get("account"):
-					ob_debit = gl_res[0].get("debit") or 0
-					ob_credit = gl_res[0].get("credit") or 0
-					opening_balance = ob_debit - ob_credit
+			if gl_res and gl_res[0].get("account"):
+				ob_debit = gl_res[0].get("debit") or 0
+				ob_credit = gl_res[0].get("credit") or 0
+				opening_balance = ob_debit - ob_credit
 
-			# Build normalised rows: debit=invoiced, credit=paid+credit_note, accum_balance=running balance
+			# Build normalised rows from GL entries
 			running_balance = opening_balance
 			normalised = []
 			if opening_balance != 0:
@@ -184,23 +187,46 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 					"credit": -opening_balance if opening_balance < 0 else 0,
 					"accum_balance": opening_balance,
 				})
-			for row in res:
-				if row.get('voucher_type') == 'Sales Invoice':
-					sales_invoice = frappe.db.get_value(
-						row['voucher_type'], row['voucher_no'],
-						['due_date', 'po_no', 'total'], as_dict=1
-					)
-					if sales_invoice:
-						row['due_date'] = sales_invoice.get('due_date') or ''
-						row['po_no'] = sales_invoice.get('po_no') or ''
-						row['total'] = sales_invoice.get('total') or 0
-				debit = row.get('invoiced') or 0
-				credit = (row.get('credit_note') or 0) + (row.get('paid') or 0)
+			total_debit = 0.0
+			total_credit = 0.0
+			for row in gl_res:
+				if not row.get("voucher_no"):
+					continue
+				debit = row.get("debit") or 0
+				credit = row.get("credit") or 0
+				total_debit += debit
+				total_credit += credit
 				running_balance += debit - credit
-				row['debit'] = debit
-				row['credit'] = credit
-				row['accum_balance'] = running_balance
-				normalised.append(row)
+				due_date = ""
+				if row.get("voucher_type") == "Sales Invoice":
+					due_date = frappe.db.get_value("Sales Invoice", row["voucher_no"], "due_date") or ""
+				normalised.append({
+					"voucher_no": row.get("voucher_no"),
+					"voucher_type": row.get("voucher_type"),
+					"posting_date": row.get("posting_date"),
+					"due_date": due_date,
+					"debit": debit,
+					"credit": credit,
+					"accum_balance": running_balance,
+				})
+			# Total row
+			normalised.append({
+				"is_summary": True,
+				"label": "Total",
+				"debit": total_debit,
+				"credit": total_credit,
+				"accum_balance": running_balance,
+			})
+			# Closing row (Opening + Total)
+			closing_debit = (opening_balance if opening_balance > 0 else 0) + total_debit
+			closing_credit = (-opening_balance if opening_balance < 0 else 0) + total_credit
+			normalised.append({
+				"is_summary": True,
+				"label": "Closing (Opening + Total)",
+				"debit": closing_debit,
+				"credit": closing_credit,
+				"accum_balance": closing_debit - closing_credit,
+			})
 			cust_dict['data'] = normalised
 
 		cad_query = f'''

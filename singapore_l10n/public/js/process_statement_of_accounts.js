@@ -204,10 +204,17 @@ let header = `
 						idx += 1;
 					}
 				} else {
-					// AR rows: opening balance row has is_opening flag; regular rows have voucher_no
+					// AR rows
 					if (val.is_opening) {
 						html += `<tr style="font-weight:bold; background:#f5f5f5;">
 							<td colspan="4"><b>Opening Balance</b></td>
+							<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+						</tr>`;
+					} else if (val.is_summary) {
+						html += `<tr style="font-weight:bold; background:#f5f5f5;">
+							<td colspan="4"><b>${val.label || ''}</b></td>
 							<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
 							<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
 							<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
@@ -218,8 +225,8 @@ let header = `
 							<td style="width: 20%">${val.voucher_no || ''}</td>
 							<td style="width: 12%">${val.posting_date || ''}</td>
 							<td style="width: 12%">${val.due_date || ''}</td>
-							<td style="width: 10%" align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
-							<td style="width: 10%" align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
+							<td style="width: 10%" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="width: 10%" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
 							<td style="width: 14%" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
 						</tr>`;
 						if (idx % 27 == 0) {

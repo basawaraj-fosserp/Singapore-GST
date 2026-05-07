@@ -185,15 +185,29 @@ let header = `
 		if (cu.data) {
 			var idx = 1;
 			$.each(cu.data, function(i, val) {
-				if (val.voucher_no) {
+				if (val.is_opening) {
+					html += `<tr style="font-weight:bold; background:#f5f5f5;">
+						<td colspan="4"><b>Opening Balance</b></td>
+						<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+						<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+						<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+					</tr>`;
+				} else if (val.is_summary) {
+					html += `<tr style="font-weight:bold; background:#f5f5f5;">
+						<td colspan="4"><b>${val.label || ''}</b></td>
+						<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+						<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+						<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+					</tr>`;
+				} else if (val.voucher_no) {
 					html += `<tr>
 						<td style="width: 5%">${idx}</td>
-						<td style="width: 20%">${val.voucher_no?val.voucher_no:''}</td>
-						<td style="width: 12%">${val.posting_date?val.posting_date:''}</td>
-						<td style="width: 12%">${val.due_date?val.due_date:''}</td>
-						<td style="width: 10%" align="right">${val.invoiced?format_currency(val.invoiced.toFixed(2)).replace('$',''):'-'}</td>
-						<td style="width: 10%" align="right">${val.credit_note?(format_currency((Number(Math.round((val.credit_note)+Number.EPSILON)*100)/100).toFixed(2)).replace('$','')):'-'}</td>
-						<td style="width: 14%" align="right">${val.outstanding?format_currency(val.outstanding):'-'}</td>
+						<td style="width: 20%">${val.voucher_no || ''}</td>
+						<td style="width: 12%">${val.posting_date || ''}</td>
+						<td style="width: 12%">${val.due_date || ''}</td>
+						<td style="width: 10%" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+						<td style="width: 10%" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+						<td style="width: 14%" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
 					</tr>`
 				if (idx % 27 == 0){
 					html += `
