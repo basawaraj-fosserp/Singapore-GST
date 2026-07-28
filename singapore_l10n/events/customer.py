@@ -8,7 +8,7 @@ def get_statements_of_account_for_customer(name, from_date=None, to_date=None):
     default_currency = frappe.db.get_value("Company", default_company, "default_currency") or "SGD"
 
     psoa_doc = frappe.new_doc("Process Statement Of Accounts")
-    psoa_doc.report = "Accounts Receivable"
+    psoa_doc.report = "General Ledger"
     psoa_doc.company = default_company
     psoa_doc.currency = default_currency
     psoa_doc.ageing_based_on = "Due Date"

@@ -32,7 +32,8 @@ frappe.ui.form.on('Customer', {
 						freeze: true,
 						freeze_message: __("Generating report ..."),
 						callback: function (r) {
-							let p_html = set_html(frm, r.message)
+							let is_gl = r.message.report === "General Ledger";
+							let p_html = set_html(frm, r.message, is_gl)
 							frappe.render_pdf(p_html, {orientation:"Portrait"});
 						}
 					});
@@ -44,7 +45,7 @@ frappe.ui.form.on('Customer', {
 })
 
 
-var set_html = function(frm, r) {
+var set_html = function(frm, r, is_gl) {
 	let style = `
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 	<style>
@@ -61,7 +62,7 @@ var set_html = function(frm, r) {
 	}
 	.print-format {
 		margin-left: 4mm;
-		margin-right: 4mm;	  
+		margin-right: 4mm;
 	}
 	.new1{
 		border-top: 1px dotted !important;
@@ -84,7 +85,7 @@ var set_html = function(frm, r) {
 	.print-format .letter-head {
 	margin-bottom: 0px;
 	}
-	
+
 	p{
         font-size: 13px;
     }
@@ -102,13 +103,13 @@ var set_html = function(frm, r) {
 	.onbottom{
 		border-bottom: 1px;;
 	}
-	
-	 
+
+
 </style>`
 let header = `
 <div class="letter-head"  style="padding-top:10px;">
 	<div class="letter-head">
-	<table  width="100%" "class="letter-head">
+	<table  width="100%" class="letter-head">
 	<tbody>
 	   <tr>
 		  <td width="10%">
@@ -129,13 +130,13 @@ let header = `
 		  </td>
 		  <td align="centre">
 			 <b style="font-size: 20px; text-transform: uppercase;">
-			 Statement of Account 
+			 Statement of Account
 			  </b>
 		 </td>
 	</tr></tbody>
- </table>	
- <div/>
-	<div/>
+ </table>
+ </div>
+	</div>
 	<hr>
 	<div>
 		`
@@ -144,7 +145,7 @@ let header = `
 	if (r.cust) {
 		$.each(r.cust, function(j, cu) {
 			html +=`
-	
+
 		<table width="100%" class="cust_head">
 	<tbody>
 		<tr>
@@ -158,7 +159,7 @@ let header = `
 			<td>
 				<p class="address-sec">Currency : ${r.currency ? r.currency : ''}</p>
 				<p class="address-sec">Payment Terms : C.O.D</p>
-				<p class="address-sec">Total Due : ${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):''}</p>
+				<p class="address-sec">Total Due : ${(cu.ageing && cu.ageing.outstanding != null)?format_currency(cu.ageing.outstanding):''}</p>
 			</td>
 			<td class="left_dotted">
 				<p class="address-sec" style="padding-left:10px;">Statement No.: ${frm.doc.name}</p>
@@ -168,88 +169,122 @@ let header = `
 	</tbody>
 </table>
 <hr class="new1">
-		<table class="table table-bordered"  style="font-size: 13px; border-spacing: 1px;">
+		`
+
+		let table_header = is_gl ? `
+		<table class="table table-bordered" style="font-size: 13px; border-spacing: 1px; table-layout: auto; width: 100%;">
 		<thead>
 			<tr>
-				<td style="width: 5%"><b>No.</b></td>
-				<td style="width: 20%"><b>Doc NO</b></td>
-				<td style="width: 12%"><b>DOCDATE</b></td>
-				<td style="width: 10%"><b>DUE DATE</b></td>
-				<td style="width: 10%" align="right"><b>DEBIT</b></td>
-				<td style="width: 10%" align="right"><b>CREDIT</b></td>
-				<td style="width: 14%" align="right"><b>ACCUM. BALANCE</b></td>
+				<td style="width: 4%;"><b>No.</b></td>
+				<td style="width: 24%;"><b>Doc No</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Date</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Due Date</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Debit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Credit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Balance</b></td>
 			</tr>
 		</thead>
-		<tbody>
-		`
+		<tbody>` : `
+		<table class="table table-bordered" style="font-size: 13px; border-spacing: 1px; table-layout: auto; width: 100%;">
+		<thead>
+			<tr>
+				<td style="width: 4%;"><b>No.</b></td>
+				<td style="width: 24%;"><b>Doc No</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Date</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Due Date</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Debit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Credit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Balance</b></td>
+			</tr>
+		</thead>
+		<tbody>`;
+
+		html += table_header;
+
 		if (cu.data) {
 			var idx = 1;
 			$.each(cu.data, function(i, val) {
-				if (val.is_opening) {
-					html += `<tr style="font-weight:bold; background:#f5f5f5;">
-						<td colspan="4"><b>Opening Balance</b></td>
-						<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
-						<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
-						<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
-					</tr>`;
-				} else if (val.is_summary) {
-					html += `<tr style="font-weight:bold; background:#f5f5f5;">
-						<td colspan="4"><b>${val.label || ''}</b></td>
-						<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
-						<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
-						<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
-					</tr>`;
-				} else if (val.voucher_no) {
-					html += `<tr>
-						<td style="width: 5%">${idx}</td>
-						<td style="width: 20%">${val.voucher_no || ''}</td>
-						<td style="width: 12%">${val.posting_date || ''}</td>
-						<td style="width: 12%">${val.due_date || ''}</td>
-						<td style="width: 10%" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
-						<td style="width: 10%" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
-						<td style="width: 14%" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
-					</tr>`
-				if (idx % 27 == 0){
-					html += `
-						</tbody>
-						</table>
-						<div class="page-break"></div>
-						`
-					html = html + header
-					html += `
-							<table class="table table-bordered"  style="font-size: 13px; border-spacing: 1px;">
-							<thead>
-								<tr>
-									<td style="width: 5%"><b>No.</b></td>
-									<td style="width: 20%"><b>Doc NO</b></td>
-									<td style="width: 12%"><b>DOCDATE</b></td>
-									<td style="width: 10%"><b>DUE DATE</b></td>
-									<td style="width: 10%" align="right"><b>DEBIT</b></td>
-									<td style="width: 10%" align="right"><b>CREDIT</b></td>
-									<td style="width: 14%" align="right"><b>ACCUM. BALANCE</b></td>
-								</tr>
-							</thead>
-							<tbody>
-							`
-					
-				}
-				idx += 1
-				
+				if (is_gl) {
+					// GL rows: regular entries have voucher_no; opening/total/closing rows have account label only
+					let is_summary = !val.voucher_no && val.account;
+					if (is_summary) {
+						html += `<tr style="font-weight:bold; background:#f5f5f5;">
+							<td></td>
+							<td><b>${val.account || ''}</b></td>
+							<td></td>
+							<td></td>
+							<td style="white-space: nowrap;" align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.balance != null ? format_currency(val.balance) : '-'}</td>
+						</tr>`;
+					} else if (val.voucher_no) {
+						html += `<tr>
+							<td style="width: 4%;">${idx}</td>
+							<td style="width: 24%;">${val.voucher_no || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.posting_date || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.due_date || ''}</td>
+							<td style="white-space: nowrap;" align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.balance != null ? format_currency(val.balance) : '-'}</td>
+						</tr>`;
+						if (idx % 27 == 0) {
+							html += `</tbody></table><div class="page-break"></div>`;
+							html += header + table_header;
+						}
+						idx += 1;
+					}
+				} else {
+					// AR rows
+					if (val.is_opening) {
+						html += `<tr style="font-weight:bold; background:#f5f5f5;">
+							<td></td>
+							<td><b>Opening Balance</b></td>
+							<td></td>
+							<td></td>
+							<td style="white-space: nowrap;" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+						</tr>`;
+					} else if (val.is_summary) {
+						html += `<tr style="font-weight:bold; background:#f5f5f5;">
+							<td></td>
+							<td><b>${val.label || ''}</b></td>
+							<td></td>
+							<td></td>
+							<td style="white-space: nowrap;" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+						</tr>`;
+					} else if (val.voucher_no) {
+						html += `<tr>
+							<td style="width: 4%;">${idx}</td>
+							<td style="width: 24%;">${val.voucher_no || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.posting_date || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.due_date || ''}</td>
+							<td style="white-space: nowrap;" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+						</tr>`;
+						if (idx % 27 == 0) {
+							html += `</tbody></table><div class="page-break"></div>`;
+							html += header + table_header;
+						}
+						idx += 1;
+					}
 				}
 			})
-			
 		}
 		html += `</tbody>
 		</table>
-		
+
 		<div id="footer-html" class="visible-pdf letter-head-footer">
 		<table width="100%" class="table" >
 			<tbody>
 				<tr>
 					<td width="14%" class="ontop onbottom"><p><b>In Words:</b></p></td>
-					<td width="58%" class="ontop onbottom"><p>${cu.ageing.outstanding_in_words}</p></td>
+					<td width="58%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding_in_words) ? cu.ageing.outstanding_in_words : ''}</p></td>
 					<td width="12%" class="ontop onbottom"><p><b>Total Due</b>:</p></td>
-					<td width="16%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</p></td>
+					<td width="16%" class="ontop onbottom"><p>${(cu.ageing && cu.ageing.outstanding != null)?format_currency(cu.ageing.outstanding):'-'}</p></td>
 				</tr>
 			</tbody>
 		</table>
@@ -266,12 +301,12 @@ let header = `
 		</thead>
 		<tbody>
 			<tr>
-				<td align="center">${(cu.ageing && cu.ageing.current_due)?format_currency(cu.ageing.current_due):'-'}</td>
-				<td align="center">${(cu.ageing && cu.ageing.range1)?format_currency(cu.ageing.range1):'-'}</td>
-				<td align="center">${(cu.ageing && cu.ageing.range2)?format_currency(cu.ageing.range2):'-'}</td>
-				<td align="center">${(cu.ageing && cu.ageing.range3)?format_currency(cu.ageing.range3):'-'}</td>
-				<td align="center">${(cu.ageing && cu.ageing.range4)?format_currency(cu.ageing.range4):'-'}</td>
-				<td align="center">${(cu.ageing && cu.ageing.outstanding)?format_currency(cu.ageing.outstanding):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.current_due != null)?format_currency(cu.ageing.current_due):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range1 != null)?format_currency(cu.ageing.range1):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range2 != null)?format_currency(cu.ageing.range2):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range3 != null)?format_currency(cu.ageing.range3):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.range4 != null)?format_currency(cu.ageing.range4):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.outstanding != null)?format_currency(cu.ageing.outstanding):'-'}</td>
 			</tr>
 		</tbody>
 	</table>
@@ -284,7 +319,7 @@ let header = `
 	}
 	})
 	}
-	
+
 	html += '</div>'
 	return html
 }

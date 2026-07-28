@@ -116,23 +116,11 @@ doctype_js = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"singapore_l10n.tasks.all"
-# 	],
-# 	"daily": [
-# 		"singapore_l10n.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"singapore_l10n.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"singapore_l10n.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"singapore_l10n.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"monthly": [
+		"singapore_l10n.events.process_statement_of_accounts.send_soa_emails"
+	],
+}
 
 # Testing
 # -------
@@ -142,9 +130,9 @@ doctype_js = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "singapore_l10n.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.send_emails": "singapore_l10n.events.process_statement_of_accounts.send_emails"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

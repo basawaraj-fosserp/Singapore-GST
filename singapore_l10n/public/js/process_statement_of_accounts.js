@@ -134,8 +134,8 @@ let header = `
 				<p class="address-sec">Payment Terms : C.O.D</p>
 				<p class="address-sec">Total Due : ${(cu.ageing && cu.ageing.outstanding != null)?format_currency(cu.ageing.outstanding):''}</p>
 			</td>
-			<td class="left_dotted">
-				<p class="address-sec" style="padding-left:10px;">Statement No.: ${frm.doc.name}</p>
+			<td class="left_dotted" style="width: 25%; max-width: 25%;">
+				<p class="address-sec" style="padding-left:10px; word-break: break-word; white-space: normal;">Statement No.: ${frm.doc.name}</p>
 				<p class="address-sec" style="padding-left:10px;">Date.: ${r.posting_date} </p>
 			</td>
 		</tr>
@@ -145,29 +145,29 @@ let header = `
 		`
 
 		let table_header = is_gl ? `
-		<table class="table table-bordered" style="font-size: 13px; border-spacing: 1px;">
+		<table class="table table-bordered" style="font-size: 13px; border-spacing: 1px; table-layout: auto; width: 100%;">
 		<thead>
 			<tr>
-				<td style="width: 5%"><b>No.</b></td>
-				<td style="width: 20%"><b>Doc No</b></td>
-				<td style="width: 12%"><b>Date</b></td>
-				<td style="width: 20%"><b>Due Date</b></td>
-				<td style="width: 10%" align="right"><b>Debit</b></td>
-				<td style="width: 10%" align="right"><b>Credit</b></td>
-				<td style="width: 13%" align="right"><b>Balance</b></td>
+				<td style="width: 4%;"><b>No.</b></td>
+				<td style="width: 24%;"><b>Doc No</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Date</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Due Date</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Debit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Credit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Balance</b></td>
 			</tr>
 		</thead>
 		<tbody>` : `
-		<table class="table table-bordered" style="font-size: 13px; border-spacing: 1px;">
+		<table class="table table-bordered" style="font-size: 13px; border-spacing: 1px; table-layout: auto; width: 100%;">
 		<thead>
 			<tr>
-				<td style="width: 5%"><b>No.</b></td>
-				<td style="width: 20%"><b>Doc NO</b></td>
-				<td style="width: 12%"><b>DOCDATE</b></td>
-				<td style="width: 10%"><b>DUE DATE</b></td>
-				<td style="width: 10%" align="right"><b>DEBIT</b></td>
-				<td style="width: 10%" align="right"><b>CREDIT</b></td>
-				<td style="width: 14%" align="right"><b>ACCUM. BALANCE</b></td>
+				<td style="width: 4%;"><b>No.</b></td>
+				<td style="width: 24%;"><b>Doc No</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Date</b></td>
+				<td style="width: 11%; white-space: nowrap;"><b>Due Date</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Debit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Credit</b></td>
+				<td style="white-space: nowrap;" align="right"><b>Balance</b></td>
 			</tr>
 		</thead>
 		<tbody>`;
@@ -182,20 +182,23 @@ let header = `
 					let is_summary = !val.voucher_no && val.account;
 					if (is_summary) {
 						html += `<tr style="font-weight:bold; background:#f5f5f5;">
-							<td colspan="4">${val.account || ''}</td>
-							<td align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
-							<td align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
-							<td align="right">${val.balance != null ? format_currency(val.balance) : '-'}</td>
+							<td></td>
+							<td><b>${val.account || ''}</b></td>
+							<td></td>
+							<td></td>
+							<td style="white-space: nowrap;" align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.balance != null ? format_currency(val.balance) : '-'}</td>
 						</tr>`;
 					} else if (val.voucher_no) {
 						html += `<tr>
-							<td style="width: 5%">${idx}</td>
-							<td style="width: 20%">${val.voucher_no || ''}</td>
-							<td style="width: 12%">${val.posting_date || ''}</td>
-							<td style="width: 20%">${val.due_date || ''}</td>
-							<td style="width: 10%" align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
-							<td style="width: 10%" align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
-							<td style="width: 13%" align="right">${val.balance != null ? format_currency(val.balance) : '-'}</td>
+							<td style="width: 4%;">${idx}</td>
+							<td style="width: 24%;">${val.voucher_no || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.posting_date || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.due_date || ''}</td>
+							<td style="white-space: nowrap;" align="right">${val.debit != null ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit != null ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.balance != null ? format_currency(val.balance) : '-'}</td>
 						</tr>`;
 						if (idx % 27 == 0) {
 							html += `</tbody></table><div class="page-break"></div>`;
@@ -207,27 +210,33 @@ let header = `
 					// AR rows
 					if (val.is_opening) {
 						html += `<tr style="font-weight:bold; background:#f5f5f5;">
-							<td colspan="4"><b>Opening Balance</b></td>
-							<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
-							<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
-							<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+							<td></td>
+							<td><b>Opening Balance</b></td>
+							<td></td>
+							<td></td>
+							<td style="white-space: nowrap;" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
 						</tr>`;
 					} else if (val.is_summary) {
 						html += `<tr style="font-weight:bold; background:#f5f5f5;">
-							<td colspan="4"><b>${val.label || ''}</b></td>
-							<td align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
-							<td align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
-							<td align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+							<td></td>
+							<td><b>${val.label || ''}</b></td>
+							<td></td>
+							<td></td>
+							<td style="white-space: nowrap;" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
 						</tr>`;
 					} else if (val.voucher_no) {
 						html += `<tr>
-							<td style="width: 5%">${idx}</td>
-							<td style="width: 20%">${val.voucher_no || ''}</td>
-							<td style="width: 12%">${val.posting_date || ''}</td>
-							<td style="width: 12%">${val.due_date || ''}</td>
-							<td style="width: 10%" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
-							<td style="width: 10%" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
-							<td style="width: 14%" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
+							<td style="width: 4%;">${idx}</td>
+							<td style="width: 24%;">${val.voucher_no || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.posting_date || ''}</td>
+							<td style="width: 11%; white-space: nowrap;">${val.due_date || ''}</td>
+							<td style="white-space: nowrap;" align="right">${val.debit ? format_currency(val.debit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.credit ? format_currency(val.credit) : '-'}</td>
+							<td style="white-space: nowrap;" align="right">${val.accum_balance != null ? format_currency(val.accum_balance) : '-'}</td>
 						</tr>`;
 						if (idx % 27 == 0) {
 							html += `</tbody></table><div class="page-break"></div>`;
