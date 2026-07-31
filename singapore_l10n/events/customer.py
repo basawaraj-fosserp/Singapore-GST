@@ -9,6 +9,7 @@ def get_statements_of_account_for_customer(name, from_date=None, to_date=None):
 
     if frappe.db.exists("Process Statement Of Accounts", name):
         psoa_doc = frappe.get_doc("Process Statement Of Accounts", name)
+        psoa_doc.group_by = "Group by Voucher (Consolidated)"
         psoa_doc.posting_date = today()
         psoa_doc.from_date = from_date
         psoa_doc.to_date = to_date
@@ -16,7 +17,7 @@ def get_statements_of_account_for_customer(name, from_date=None, to_date=None):
     else:
         psoa_doc = frappe.new_doc("Process Statement Of Accounts")
         psoa_doc.name = name
-        psoa_doc.report = "Accounts Receivable"
+        psoa_doc.group_by = "Group by Voucher (Consolidated)"
         psoa_doc.posting_date = today()
         psoa_doc.from_date = from_date
         psoa_doc.to_date = to_date

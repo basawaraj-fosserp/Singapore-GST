@@ -130,9 +130,9 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "singapore_l10n.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.send_emails": "singapore_l10n.events.process_statement_of_accounts.send_emails"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

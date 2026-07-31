@@ -13,7 +13,10 @@ from erpnext.accounts.report.general_ledger.general_ledger import execute as get
 
 @frappe.whitelist()
 def get_statements_of_account(name, from_date=None, to_date=None):
-	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
+	if isinstance(name, frappe.model.document.Document):
+		psoa_doc = name
+	else:
+		psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
 	from_date = from_date or psoa_doc.get('from_date')
 	to_date = to_date or psoa_doc.get('to_date')
 	out_data = {}
@@ -38,8 +41,8 @@ def get_statements_of_account(name, from_date=None, to_date=None):
 				"presentation_currency": presentation_currency,
 				"group_by": psoa_doc.group_by,
 				"currency": psoa_doc.currency,
-				"cost_center": [cc.cost_center_name for cc in psoa_doc.cost_center],
-				"project": [p.project_name for p in psoa_doc.project],
+				"cost_center": [cc.cost_center_name for cc in psoa_doc.get("cost_center") or []],
+				"project": [p.project_name for p in psoa_doc.get("project") or []],
 				"show_opening_entries": 0,
 				"include_default_book_entries": 0,
 				"tax_id": tax_id if tax_id else None,
@@ -347,9 +350,165 @@ p { font-size: 13px; margin: 0px 0px 2px; }
 	return html
 
 
+@frappe.whitelist()
+def send_emails(document_name, from_scheduler=False):
+	"""Override for ERPNext's send_emails — sends SOA PDF using our GL-based HTML builder."""
+	from frappe.utils.pdf import get_pdf
+	name = document_name
+	data = get_statements_of_account(name)
+	if not data.get('cust'):
+		frappe.msgprint("No statement data found.")
+		return
+	cu = data['cust'][0]
+	customer = (cu.get('cad_data') or {}).get('customer_name') or name
+	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
+	recipients = [get_customer_email(psoa_doc.customers[0].customer)]
+	recipients = [r for r in recipients if r]
+	if not recipients:
+		frappe.msgprint("No email address found for this customer.")
+		return
+	html = build_soa_html(name, data)
+	pdf_content = get_pdf(html)
+	frappe.sendmail(
+		recipients=recipients,
+		subject=f"Statement of Account",
+		message=f"<p>Please find your Statement of Account attached.</p>",
+		attachments=[{'fname': f"SOA_{name}.pdf", 'fcontent': pdf_content}],
+		reference_doctype='Process Statement Of Accounts',
+		reference_name=name,
+		now=True
+	)
+	frappe.msgprint(f"SOA email sent to: {', '.join(recipients)}")
+
+
+def get_eligible_customer_companies(from_date, to_date):
+	"""Return distinct (customer, company) pairs with GL activity in the given period."""
+	return frappe.db.sql("""
+		SELECT DISTINCT gl.party AS customer, gl.company
+		FROM `tabGL Entry` gl
+		JOIN `tabCustomer` cu ON cu.name = gl.party
+		WHERE gl.party_type = 'Customer'
+		  AND gl.is_cancelled = 0
+		  AND gl.posting_date BETWEEN %s AND %s
+		  AND cu.disabled = 0
+	""", (from_date, to_date), as_dict=True)
+
+
+def create_soa_for_customer(customer, company, from_date, to_date):
+	"""Create or reuse a deterministic PSOA doc for this customer+company+month."""
+	month_str = frappe.utils.getdate(to_date).strftime('%Y-%m')
+	doc_name = f"SOA-{customer}-{company}-{month_str}"
+
+	if frappe.db.exists('Process Statement Of Accounts', doc_name):
+		psoa_doc = frappe.get_doc('Process Statement Of Accounts', doc_name)
+		psoa_doc.from_date = from_date
+		psoa_doc.to_date = to_date
+		psoa_doc.group_by = "Group by Voucher (Consolidated)"
+		psoa_doc.save(ignore_permissions=True)
+	else:
+		psoa_doc = frappe.new_doc('Process Statement Of Accounts')
+		psoa_doc.name = doc_name
+		psoa_doc.company = company
+		psoa_doc.from_date = from_date
+		psoa_doc.to_date = to_date
+		psoa_doc.group_by = "Group by Voucher (Consolidated)"
+		psoa_doc.append('customers', {'customer': customer})
+		psoa_doc.insert(ignore_permissions=True)
+
+	frappe.db.commit()
+	return psoa_doc
+
+
+def build_temp_soa_for_customer(customer, company, from_date, to_date):
+	"""Build an in-memory (never inserted) PSOA doc for this customer+company+period."""
+	month_str = frappe.utils.getdate(to_date).strftime('%Y-%m')
+	psoa_doc = frappe.new_doc('Process Statement Of Accounts')
+	psoa_doc.name = f"SOA-{customer}-{company}-{month_str}"
+	psoa_doc.company = company
+	psoa_doc.from_date = from_date
+	psoa_doc.to_date = to_date
+	psoa_doc.group_by = "Group by Voucher (Consolidated)"
+	psoa_doc.append('customers', {'customer': customer})
+	return psoa_doc
+
+
+def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
+	"""Shared core for the real monthly SOA run and the SOA Settings test-email feature."""
+	from frappe.utils.pdf import get_pdf
+
+	settings = frappe.get_single('SOA Settings')
+	default_subject = settings.email_subject or "Statement of Account — {month}"
+	default_message = settings.email_message or """
+		<p>Dear {customer_name},</p>
+		<p>Thank you for your continued business and valued partnership with us.</p>
+		<p>Please find attached your Statement of Account for <b>{month}</b>.</p>
+		<p>Should you have any queries, please do not hesitate to reach out to us.</p>
+		<p>We truly appreciate your trust and look forward to serving you.</p>
+		<br><p>Warm regards,<br><b>KG Sowers Group Pte Ltd</b></p>
+	"""
+
+	eligible = get_eligible_customer_companies(from_date, to_date)
+	sent_customers = set()
+	emails_sent = 0
+
+	for entry in eligible:
+		customer = entry['customer']
+		company = entry['company']
+		key = (customer, company)
+		if key in sent_customers:
+			continue
+
+		try:
+			if test_email:
+				psoa_doc = build_temp_soa_for_customer(customer, company, from_date, to_date)
+			else:
+				psoa_doc = create_soa_for_customer(customer, company, from_date, to_date)
+
+			data = get_statements_of_account(psoa_doc, from_date, to_date)
+
+			if not data.get('cust'):
+				continue
+
+			cu = data['cust'][0]
+			if not any(r.get('voucher_no') for r in cu.get('data', [])):
+				continue
+
+			recipient = test_email or get_customer_email(customer)
+			if not recipient:
+				continue
+
+			customer_name = (cu.get('cad_data') or {}).get('customer_name') or customer
+			subject = default_subject.replace('{month}', month_label)
+			message = default_message.replace('{month}', month_label).replace('{customer_name}', customer_name)
+
+			html = build_soa_html(psoa_doc.name, data)
+			pdf_content = get_pdf(html)
+
+			sendmail_kwargs = dict(
+				recipients=[recipient],
+				subject=subject,
+				message=message,
+				attachments=[{
+					'fname': f"SOA_{customer}_{month_label.replace(' ', '_')}.pdf",
+					'fcontent': pdf_content
+				}],
+				now=True
+			)
+			if not test_email:
+				sendmail_kwargs['reference_doctype'] = 'Process Statement Of Accounts'
+				sendmail_kwargs['reference_name'] = psoa_doc.name
+
+			frappe.sendmail(**sendmail_kwargs)
+			sent_customers.add(key)
+			emails_sent += 1
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), f"SOA Email Failed: {customer}")
+
+	return emails_sent
+
+
 def send_soa_emails():
 	from frappe.utils import get_first_day, get_last_day, add_months, today
-	from frappe.utils.pdf import get_pdf
 
 	settings = frappe.get_single('SOA Settings')
 	if not settings.enable_auto_soa_email:
@@ -361,50 +520,37 @@ def send_soa_emails():
 	to_date = str(last_of_prev)
 	month_label = frappe.utils.formatdate(to_date, 'MMMM YYYY')
 
-	default_subject = settings.email_subject or "Statement of Account — {month}"
-	default_message = settings.email_message or """
-		<p>Dear {customer_name},</p>
-		<p>Thank you for your continued business and valued partnership with us.</p>
-		<p>Please find attached your Statement of Account for <b>{month}</b>.</p>
-		<p>Should you have any queries, please do not hesitate to reach out to us.</p>
-		<p>We truly appreciate your trust and look forward to serving you.</p>
-		<br><p>Warm regards,<br><b>KG Sowers Group Pte Ltd</b></p>
-	"""
+	run_soa_monthly_job(from_date, to_date, month_label)
 
-	for entry in frappe.get_all('Process Statement Of Accounts', fields=['name']):
-		try:
-			data = get_statements_of_account(entry.name, from_date, to_date)
-			if not data.get('cust'):
-				continue
 
-			cu = data['cust'][0]
-			if not any(r.get('voucher_no') for r in cu.get('data', [])):
-				continue
+@frappe.whitelist()
+def send_test_soa_email(email, from_date, to_date):
+	frappe.only_for('System Manager')
+	frappe.enqueue(
+		run_test_soa_email_job,
+		queue='long',
+		timeout=3600,
+		email=email,
+		from_date=from_date,
+		to_date=to_date,
+		requesting_user=frappe.session.user,
+	)
+	return {"queued": True}
 
-			psoa_doc = frappe.get_doc('Process Statement Of Accounts', entry.name)
-			customer = psoa_doc.customers[0].customer
-			recipient = get_customer_email(customer)
-			if not recipient:
-				continue
 
-			customer_name = (cu.get('cad_data') or {}).get('customer_name') or customer
-			subject = default_subject.replace('{month}', month_label)
-			message = default_message.replace('{month}', month_label).replace('{customer_name}', customer_name)
-
-			html = build_soa_html(entry.name, data)
-			pdf_content = get_pdf(html)
-
-			frappe.sendmail(
-				recipients=[recipient],
-				subject=subject,
-				message=message,
-				attachments=[{
-					'fname': f"SOA_{customer}_{to_date}.pdf",
-					'fcontent': pdf_content
-				}],
-				reference_doctype='Process Statement Of Accounts',
-				reference_name=entry.name,
-				now=True
-			)
-		except Exception:
-			frappe.log_error(frappe.get_traceback(), f"SOA Email Failed: {entry.name}")
+def run_test_soa_email_job(email, from_date, to_date, requesting_user):
+	month_label = frappe.utils.formatdate(to_date, 'MMMM YYYY')
+	try:
+		emails_sent = run_soa_monthly_job(from_date, to_date, month_label, test_email=email)
+		frappe.publish_realtime(
+			"soa_test_email_done",
+			{"success": True, "emails_sent": emails_sent},
+			user=requesting_user,
+		)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "SOA Test Email Job Failed")
+		frappe.publish_realtime(
+			"soa_test_email_done",
+			{"success": False, "error": frappe.get_traceback()},
+			user=requesting_user,
+		)
