@@ -61,6 +61,11 @@ VOUCHER_DESCRIPTION_CONFIG = {
         "filters": lambda d: {"parent": d.get("voucher_no"), "expense_account": d.get("account")},
         "fieldname": "description",
     },
+	"Purchase Receipt": {
+		"doctype": "Purchase Receipt Item",
+		"filters": lambda d: {"parent": d.get("voucher_no"), "expense_account": d.get("account")},
+		"fieldname": "description",
+	},
     "Journal Entry": {
         "doctype": "Journal Entry",
         "filters": lambda d: {"name": d.get("voucher_no")},

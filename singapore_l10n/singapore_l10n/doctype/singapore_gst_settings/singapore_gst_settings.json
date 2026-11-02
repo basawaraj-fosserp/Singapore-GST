@@ -20,7 +20,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-09-02 18:16:42.774070",
+ "modified": "2025-12-15 18:21:42.861317",
  "modified_by": "Administrator",
  "module": "Singapore L10N",
  "name": "Singapore GST Settings",
@@ -37,6 +37,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []
