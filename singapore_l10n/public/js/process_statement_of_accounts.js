@@ -13,6 +13,14 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 				}
 			});
 		});
+		if (!frm.is_new()) {
+			frm.add_custom_button(__('Outstanding Payment'), function(){
+				window.open(frappe.urllib.get_full_url(
+					"/api/method/singapore_l10n.events.process_statement_of_accounts.download_outstanding_payment?"
+					+ "name=" + encodeURIComponent(frm.doc.name)
+				));
+			});
+		}
 		frm.remove_custom_button(__("Download"))
 		}
 })
