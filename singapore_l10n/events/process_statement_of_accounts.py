@@ -557,3 +557,256 @@ def run_test_soa_email_job(email, from_date, to_date, requesting_user):
 			{"success": False, "error": frappe.get_traceback()},
 			user=requesting_user,
 		)
+
+
+def get_outstanding_invoices(customer, company, to_date=None):
+	"""Submitted Sales Invoices of the customer that still have a balance to pay."""
+	filters = {
+		"customer": customer,
+		"company": company,
+		"docstatus": 1,
+		"outstanding_amount": [">", 0],
+	}
+	if to_date:
+		filters["posting_date"] = ["<=", to_date]
+	return frappe.get_all(
+		"Sales Invoice",
+		filters=filters,
+		fields=["name", "posting_date", "due_date", "po_no", "currency", "grand_total", "outstanding_amount"],
+		order_by="posting_date asc, name asc",
+	)
+
+
+def get_outstanding_ageing(invoices, ageing_based_on=None, report_date=None):
+	"""Split outstanding amounts into [current, 1-30, 31-60, 61-90, over 90] days overdue."""
+	report_date = getdate(report_date)
+	buckets = [0.0] * 5
+	for inv in invoices:
+		basis = inv.posting_date if ageing_based_on == "Posting Date" else (inv.due_date or inv.posting_date)
+		age = (report_date - getdate(basis)).days
+		if age <= 0:
+			i = 0
+		elif age <= 30:
+			i = 1
+		elif age <= 60:
+			i = 2
+		elif age <= 90:
+			i = 3
+		else:
+			i = 4
+		buckets[i] += inv.outstanding_amount or 0
+	return buckets
+
+
+def build_outstanding_html(doc_name, data):
+	def fc(amount, currency=None):
+		if amount is None:
+			return '-'
+		return fmt_money(amount, currency=currency or data.get('currency') or 'SGD')
+
+	def fd(date):
+		return frappe.utils.formatdate(date, "dd MMM yy") if date else ''
+
+	style = """
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap">
+<style>
+* { font-family: 'IBM Plex Sans', sans-serif !important; }
+.lhead { font-size:9px; margin-top:0px; margin-bottom:0px !important; vertical-align: top !important; }
+.blhead { font-weight:600 !important; font-size:9px !important; }
+.address-sec { margin-top:0px; margin-bottom:0px !important; vertical-align: text-top; }
+.left_dotted { border-left: 2px dotted !important; }
+p { font-size: 13px; margin: 0px 0px 2px; }
+.new1 { border-top: 1px dotted !important; }
+.os-title { font-size:16px; font-weight:700; margin:18px 0px 10px; padding-left:4px; }
+.os-table { width:100%; border-collapse:collapse; font-size:12px; }
+.os-table th { font-weight:700; padding:6px 4px; border-bottom:2px solid #000; text-align:left; }
+.os-table td { padding:5px 4px; border-bottom:1px solid #ccc; }
+.os-table .num { text-align:right; white-space:nowrap; }
+.os-total td { border-bottom:none; font-size:15px; font-weight:700; padding-top:8px; }
+.print-format {
+	margin-top: 5mm;
+	margin-bottom: __MB__;
+}
+</style>"""
+	# one page footer per PDF, so only pin it when there is a single customer
+	pin_footer = len(data.get('cust', [])) == 1
+	style = style.replace("__MB__", "52mm" if pin_footer else "5mm")
+
+	logo_path = os.path.join(frappe.get_site_path(), "public", "files", "photo_2024-05-10_09-34-57.jpg")
+	logo_src = ""
+	if os.path.exists(logo_path):
+		with open(logo_path, "rb") as f:
+			logo_src = "data:image/jpeg;base64," + base64.b64encode(f.read()).decode("utf-8")
+
+	header = f"""
+<div class="letter-head">
+	<div class="letter-head">
+	<table width="100%"><tbody><tr>
+		<td width="10%"><img height="60" src="{logo_src}" width="60"></td>
+		<td width="21%">
+			<p style="margin-bottom:0px !important; margin-top:0px;"><b style="font-size:11px;">KG SOWERS GROUP PTE LTD</b></p>
+			<p class="lhead">2 GAMBAS CRESCENT,</p>
+			<p class="lhead">#08-03/04 NORDCOM II, TOWER 1</p>
+			<p class="lhead">Singapore 757044</p>
+		</td>
+		<td width="32%">
+			<br>
+			<p class="lhead"><b class="blhead">Web: </b>www.sowers.com.sg</p>
+			<p class="lhead"><b class="blhead">UEN/GST No: </b>201527820N</p>
+		</td>
+		<td align="centre"><b style="font-size:20px; text-transform:uppercase;">Statement of Account</b></td>
+	</tr></tbody></table>
+	</div>
+</div>
+<hr>
+<div>"""
+
+	html = style + header
+
+	for j, cu in enumerate(data.get('cust', [])):
+		cad = cu.get('cad_data') or {}
+		invoices = cu.get('invoices') or []
+		currency = cu.get('currency') or data.get('currency') or 'SGD'
+		currency_name = frappe.db.get_value("Currency", currency, "currency_name") or currency
+		total_due = sum(inv.outstanding_amount for inv in invoices)
+		ageing = get_outstanding_ageing(invoices, data.get('ageing_based_on'), data.get('report_date'))
+
+		html += f"""
+<table width="100%"><tbody><tr>
+	<td>
+		<p class="address-sec">{cad.get('customer_name') or cu.get('customer','')}</p>
+		<p class="address-sec">{cad.get('address_line1') or ''}</p>
+		<p class="address-sec">{cad.get('address_line2') or ''}</p>
+		<p class="address-sec">{cad.get('city') or ''} {cad.get('pincode') or ''}</p>
+		<p class="address-sec">{cad.get('country') or ''}</p>
+	</td>
+	<td>
+		<p class="address-sec">Currency : {currency}</p>
+		<p class="address-sec">Payment Terms : C.O.D</p>
+		<p class="address-sec">Total Due : {fc(total_due, currency)}</p>
+	</td>
+	<td class="left_dotted">
+		<p class="address-sec" style="padding-left:10px;">Date.: {data.get('posting_date','')}</p>
+	</td>
+</tr></tbody></table>
+<hr class="new1">
+<p class="os-title">Balance due in {currency}{(", " + currency_name) if currency_name != currency else ""}</p>
+<table class="os-table">
+<thead><tr>
+	<th style="width:11%">Date</th>
+	<th style="width:20%">Activity</th>
+	<th style="width:14%">Reference</th>
+	<th style="width:11%">Due Date</th>
+	<th style="width:15%" class="num">Invoice Amount</th>
+	<th style="width:14%" class="num">Payments</th>
+	<th style="width:15%" class="num">Balance {currency}</th>
+</tr></thead>
+<tbody>"""
+
+		for inv in invoices:
+			paid = (inv.grand_total or 0) - (inv.outstanding_amount or 0)
+			html += f"""<tr>
+	<td>{fd(inv.posting_date)}</td>
+	<td>{inv.name}</td>
+	<td>{inv.po_no or ''}</td>
+	<td>{fd(inv.due_date)}</td>
+	<td class="num">{fmt_money(inv.grand_total, currency=currency)}</td>
+	<td class="num">{fmt_money(paid, currency=currency) if paid else ''}</td>
+	<td class="num">{fmt_money(inv.outstanding_amount, currency=currency)}</td>
+</tr>"""
+
+		if not invoices:
+			html += '<tr><td colspan="7" align="center">No outstanding invoices.</td></tr>'
+
+		html += f"""<tr class="os-total">
+	<td colspan="5"></td>
+	<td class="num">BALANCE DUE</td>
+	<td class="num">{fc(total_due, currency)}</td>
+</tr>
+</tbody></table>
+<div{' id="footer-html"' if pin_footer else ''}>
+<div{' class="letter-head-footer"' if pin_footer else ''}>
+<table width="100%" class="table" style="margin-top:0px; margin-bottom:6px;"><tbody><tr>
+	<td width="14%" style="border-top:1px solid #ccc; border-bottom:1px solid #ccc;"><p><b>In Words:</b></p></td>
+	<td width="60%" style="border-top:1px solid #ccc; border-bottom:1px solid #ccc;"><p>{money_in_words(total_due, currency)}</p></td>
+	<td width="12%" style="border-top:1px solid #ccc; border-bottom:1px solid #ccc;"><p><b>Total Due</b>:</p></td>
+	<td width="14%" style="border-top:1px solid #ccc; border-bottom:1px solid #ccc;"><p>{fc(total_due, currency)}</p></td>
+</tr></tbody></table>
+<table class="table table-bordered" style="font-size:13px; border-spacing:0px; width:100%;">
+<thead><tr>
+	<td style="width:16%" align="center"><b>Current Due</b></td>
+	<td style="width:16%" align="center"><b>1-30 Days</b></td>
+	<td style="width:16%" align="center"><b>31-60 Days</b></td>
+	<td style="width:16%" align="center"><b>61-90 Days</b></td>
+	<td style="width:16%" align="center"><b>Over 90 Days</b></td>
+	<td style="width:16%" align="center"><b>Amount Due</b></td>
+</tr></thead>
+<tbody><tr>
+	<td align="center">{fc(ageing[0], currency)}</td>
+	<td align="center">{fc(ageing[1], currency)}</td>
+	<td align="center">{fc(ageing[2], currency)}</td>
+	<td align="center">{fc(ageing[3], currency)}</td>
+	<td align="center">{fc(ageing[4], currency)}</td>
+	<td align="center">{fc(total_due, currency)}</td>
+</tr></tbody></table>
+<center style="font-size:8px; margin-top:6px;">THIS IS A COMPUTER GENERATED DOCUMENT. NO SIGNATURE IS REQUIRED.</center>
+</div>
+</div>"""
+
+		if j + 1 < len(data.get('cust', [])):
+			html += '<div style="page-break-before:always;"></div>' + header
+
+	html += '</div>'
+	return html
+
+
+@frappe.whitelist()
+def download_outstanding_payment(name):
+	"""Download a PDF listing only the outstanding Sales Invoices of the PSOA customers."""
+	from frappe.utils.pdf import get_pdf
+
+	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
+	psoa_doc.check_permission("read")
+
+	cust_list = []
+	for cust in psoa_doc.customers:
+		cad_data = frappe.db.sql('''
+			SELECT
+				ad.address_line1, ad.address_line2, ad.city, ad.pincode, ad.country,
+				cus.customer_name
+			FROM
+				tabAddress AS ad LEFT JOIN
+				`tabDynamic Link` AS dl ON dl.parent=ad.name LEFT JOIN
+				tabCustomer AS cus ON dl.link_name=cus.name
+			WHERE
+				dl.link_doctype="Customer" AND dl.link_name=%s''', cust.customer, as_dict=True)
+		cust_list.append({
+			'customer': cust.customer,
+			'cad_data': cad_data[0] if cad_data else {
+				'customer_name': frappe.db.get_value("Customer", cust.customer, "customer_name")
+			},
+			'currency': (
+				get_party_account_currency("Customer", cust.customer, psoa_doc.company)
+				or psoa_doc.currency
+				or get_company_currency(psoa_doc.company)
+			),
+			'invoices': get_outstanding_invoices(cust.customer, psoa_doc.company, psoa_doc.get('to_date')),
+		})
+
+	data = {
+		'cust': cust_list,
+		'currency': psoa_doc.currency,
+		'posting_date': frappe.utils.formatdate(getdate(), "dd MMM YYYY"),
+		'ageing_based_on': psoa_doc.get('ageing_based_on'),
+		'report_date': psoa_doc.get('to_date'),
+	}
+	html = build_outstanding_html(name, data)
+
+	frappe.local.response.filename = f"Outstanding_{name}.pdf"
+	frappe.local.response.filecontent = get_pdf(html, {
+		"margin-top": "5mm",
+		"margin-bottom": "5mm",
+		"margin-left": "7mm",
+		"margin-right": "7mm",
+	})
+	frappe.local.response.type = "pdf"
