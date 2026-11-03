@@ -284,7 +284,10 @@ p { font-size: 13px; margin: 0px 0px 2px; }
 		<p class="address-sec">Total Due : {fc(ageing.get('outstanding'))}</p>
 	</td>
 	<td class="left_dotted">
-		<p class="address-sec" style="padding-left:10px;">Statement No.: {doc_name}</p>
+		<table style="margin-left:10px;"><tbody><tr>
+			<td style="vertical-align:top; white-space:nowrap; padding:0px 4px 0px 0px;"><p class="address-sec">Statement No.:</p></td>
+			<td style="vertical-align:top; max-width:200px; padding:0px; word-wrap:break-word;"><p class="address-sec">{doc_name}</p></td>
+		</tr></tbody></table>
 		<p class="address-sec" style="padding-left:10px;">Date.: {data.get('posting_date','')}</p>
 	</td>
 </tr></tbody></table>
