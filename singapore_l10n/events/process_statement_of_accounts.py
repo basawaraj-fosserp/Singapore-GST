@@ -404,11 +404,8 @@ def send_emails(document_name, from_scheduler=False):
 	if not recipients:
 		frappe.msgprint("No email address found for this customer.")
 		return
-	html = build_soa_html(name, data)
-	pdf_content = get_pdf(html)
-	attachments = [{'fname': f"SOA_{name}.pdf", 'fcontent': pdf_content}]
-
-	# second attachment: only the invoices still unpaid (skipped when everything is paid)
+	# only attachment: the invoices still unpaid (skipped when everything is paid)
+	attachments = []
 	outstanding_pdf, has_outstanding = build_outstanding_pdf(psoa_doc)
 	if has_outstanding:
 		attachments.append({'fname': f"Outstanding_{name}.pdf", 'fcontent': outstanding_pdf})
@@ -537,15 +534,8 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 			subject = default_subject.replace('{month}', month_label)
 			message = default_message.replace('{month}', month_label).replace('{customer_name}', customer_name)
 
-			html = build_soa_html(psoa_doc.name, data)
-			pdf_content = get_pdf(html)
-
-			attachments = [{
-				'fname': f"SOA_{customer}_{month_label.replace(' ', '_')}.pdf",
-				'fcontent': pdf_content
-			}]
-
-			# second attachment: only the invoices still unpaid (skipped when everything is paid)
+			# only attachment: the invoices still unpaid (skipped when everything is paid)
+			attachments = []
 			outstanding_pdf, has_outstanding = build_outstanding_pdf(psoa_doc)
 			if has_outstanding:
 				attachments.append({
