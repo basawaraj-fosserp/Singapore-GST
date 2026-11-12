@@ -840,7 +840,7 @@ def build_outstanding_pdf(psoa_doc):
 				or psoa_doc.currency
 				or get_company_currency(psoa_doc.company)
 			),
-			'invoices': get_outstanding_invoices(cust.customer, psoa_doc.company, psoa_doc.get('to_date')),
+			'invoices': get_outstanding_invoices(cust.customer, psoa_doc.company),
 		})
 
 	data = {
@@ -848,7 +848,7 @@ def build_outstanding_pdf(psoa_doc):
 		'currency': psoa_doc.currency,
 		'posting_date': frappe.utils.formatdate(getdate(), "dd MMM YYYY"),
 		'ageing_based_on': psoa_doc.get('ageing_based_on'),
-		'report_date': psoa_doc.get('to_date'),
+		'report_date': None,  # age as of today, since all outstanding history is listed
 	}
 	html = build_outstanding_html(name, data)
 
