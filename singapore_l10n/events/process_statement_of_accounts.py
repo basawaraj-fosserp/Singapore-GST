@@ -485,7 +485,7 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 	default_message = settings.email_message or """
 		<p>Dear {customer_name},</p>
 		<p>Thank you for your continued business and valued partnership with us.</p>
-		<p>Please find attached your Statement of Account for <b>{month}</b>.</p>
+		<p>Please find attached your Statement of Account listing all outstanding invoices on your account.</p>
 		<p>Should you have any queries, please do not hesitate to reach out to us.</p>
 		<p>We truly appreciate your trust and look forward to serving you.</p>
 		<br><p>Warm regards,<br><b>KG Sowers Group Pte Ltd</b></p>
