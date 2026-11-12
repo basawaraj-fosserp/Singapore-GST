@@ -981,7 +981,7 @@ p { font-size: 13px; margin: 0px 0px 2px; }
 	pin_footer = len(data.get('cust', [])) == 1
 	style = style.replace("__MB__", "52mm" if pin_footer else "5mm")
 
-	logo_path = os.path.join(frappe.get_site_path(), "public", "files", "photo_2024-05-10_09-34-57.jpg")
+	logo_path = os.path.join(frappe.get_site_path(), "public", "files", "KGS-Logo.png")
 	logo_src = ""
 	if os.path.exists(logo_path):
 		with open(logo_path, "rb") as f:
