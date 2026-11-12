@@ -683,6 +683,7 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
           <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">31–60 Days</th>
           <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">61–90 Days</th>
           <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">Over 90 Days</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">Amount Due</th>
         </tr>
       </thead>
       <tbody>
@@ -692,6 +693,7 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
           <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range2, currency)}</td>
           <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range3, currency)}</td>
           <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(over_90, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;"><b>{_fmt(outstanding, currency)}</b></td>
         </tr>
       </tbody>
     </table>
