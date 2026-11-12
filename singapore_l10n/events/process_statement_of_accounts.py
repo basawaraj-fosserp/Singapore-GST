@@ -286,13 +286,13 @@ def get_statements_of_account_from_gl(name, is_from_customer = False):
 		outstanding = ageing_row.get("outstanding") or 0
 		ageing_row["outstanding"] = outstanding
 		ageing_row["outstanding_in_words"] = money_in_words(abs(outstanding))
-		ageing_row["current_due"] = (
-			outstanding
-			- (ageing_row.get("range1") or 0)
-			- (ageing_row.get("range2") or 0)
-			- (ageing_row.get("range3") or 0)
-			- (ageing_row.get("range4") or 0)
-		)
+		# AR Summary buckets (by days overdue): range1 0-30, range2 31-60,
+		# range3 61-90, range4 91-120, range5 121+. Amounts not yet due are in
+		# no bucket, so current due = outstanding minus ALL five ranges.
+		ranges = [ageing_row.get(f"range{i}") or 0 for i in range(1, 6)]
+		ageing_row["current_due"] = outstanding - sum(ranges)
+		# "Over 90 Days" column = 91-120 + 121+ (same as the Outstanding PDF)
+		ageing_row["over_90"] = ranges[3] + ranges[4]
 		cust_dict['ageing'] = ageing_row
 		out_list.append(cust_dict)
 
@@ -603,7 +603,7 @@ p { font-size: 13px; }
   <td style="width: 16%" align="center"><b>1-30 Days</b></td>
   <td style="width: 16%" align="center"><b>31-60 Days</b></td>
   <td style="width: 16%" align="center"><b>61-90 Days</b></td>
-  <td style="width: 16%" align="center"><b>120+ Days</b></td>
+  <td style="width: 16%" align="center"><b>Over 90 Days</b></td>
   <td style="width: 16%" align="center"><b>Amount Due</b></td>
 </tr></thead>
 <tbody><tr>
@@ -611,7 +611,7 @@ p { font-size: 13px; }
   <td align="center">{_fmt(ageing.get('range1'), currency)}</td>
   <td align="center">{_fmt(ageing.get('range2'), currency)}</td>
   <td align="center">{_fmt(ageing.get('range3'), currency)}</td>
-  <td align="center">{_fmt(ageing.get('range4'), currency)}</td>
+  <td align="center">{_fmt(ageing.get('over_90'), currency)}</td>
   <td align="center">{_fmt(outstanding, currency)}</td>
 </tr></tbody></table>
 <center style="font-size: 8px;">THIS IS A COMPUTER GENERATED DOCUMENT. NO SIGNATURE IS REQUIRED.</center>
@@ -630,7 +630,7 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
 	range1 = ageing.get("range1") or 0
 	range2 = ageing.get("range2") or 0
 	range3 = ageing.get("range3") or 0
-	range4 = ageing.get("range4") or 0
+	over_90 = ageing.get("over_90") or 0
 	current_due = ageing.get("current_due") or 0
 
 	def row(label, value, highlight=False):
@@ -682,7 +682,7 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
           <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">1–30 Days</th>
           <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">31–60 Days</th>
           <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">61–90 Days</th>
-          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">120+ Days</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">Over 90 Days</th>
         </tr>
       </thead>
       <tbody>
@@ -691,7 +691,7 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
           <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range1, currency)}</td>
           <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range2, currency)}</td>
           <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range3, currency)}</td>
-          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range4, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(over_90, currency)}</td>
         </tr>
       </tbody>
     </table>
