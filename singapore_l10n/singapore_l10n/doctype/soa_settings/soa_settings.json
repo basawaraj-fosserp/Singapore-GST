@@ -8,7 +8,8 @@
   "enable_auto_soa_email",
   "section_break_1",
   "email_subject",
-  "email_message"
+  "email_message",
+  "soa_customer"
  ],
  "fields": [
   {
@@ -35,6 +36,13 @@
    "fieldtype": "Text Editor",
    "label": "Email Message",
    "description": "Use {customer_name} and {month} as placeholders"
+  },
+  {
+   "fieldname": "soa_customer",
+   "fieldtype": "Table",
+   "label": "SOA Customer",
+   "options": "SOA Table",
+   "description": "Only customers listed here receive the monthly SOA email."
   }
  ],
  "index_web_pages_for_search": 1,
@@ -42,7 +50,7 @@
  "links": [],
  "modified": "2026-05-21 00:00:00.000000",
  "modified_by": "Administrator",
- "module": "singapore_l10n",
+ "module": "Singapore L10N",
  "name": "SOA Settings",
  "owner": "Administrator",
  "permissions": [

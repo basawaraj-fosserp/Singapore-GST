@@ -200,6 +200,40 @@ def get_customer_email(customer):
 	return result[0][0] if result else None
 
 
+@frappe.whitelist()
+def get_customer_contact_emails(customer):
+	"""Return every distinct Contact email linked to a customer, primary
+	contact first, as a comma-separated string (used to auto-fill the SOA
+	Customer table's Email field when a customer is selected)."""
+	rows = frappe.db.sql("""
+		SELECT co.email_id
+		FROM tabContact AS co
+		INNER JOIN `tabDynamic Link` AS dl ON dl.parent = co.name
+		WHERE dl.link_doctype = 'Customer'
+		  AND dl.link_name = %s
+		  AND co.email_id IS NOT NULL
+		  AND co.email_id != ''
+		ORDER BY co.is_primary_contact DESC
+	""", customer, as_dict=True)
+
+	seen = set()
+	emails = []
+	for row in rows:
+		email = row.email_id.strip()
+		if email and email.lower() not in seen:
+			seen.add(email.lower())
+			emails.append(email)
+
+	return ", ".join(emails)
+
+
+def split_emails(email_string):
+	"""Split a comma-separated email string into a list of trimmed addresses."""
+	if not email_string:
+		return []
+	return [addr.strip() for addr in email_string.split(",") if addr.strip()]
+
+
 def build_soa_html(doc_name, data):
 	def fc(amount):
 		if amount is None:
@@ -450,7 +484,13 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 		<br><p>Warm regards,<br><b>KG Sowers Group Pte Ltd</b></p>
 	"""
 
+	# only customers listed in SOA Settings' "SOA Customer" table are emailed
+	soa_customer_emails = {row.customer: row.email for row in settings.soa_customer if row.customer}
+	if not soa_customer_emails:
+		return 0
+
 	eligible = get_eligible_customer_companies(from_date, to_date)
+	eligible = [row for row in eligible if row['customer'] in soa_customer_emails]
 	sent_customers = set()
 	emails_sent = 0
 
@@ -476,8 +516,14 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 			if not any(r.get('voucher_no') for r in cu.get('data', [])):
 				continue
 
-			recipient = test_email or get_customer_email(customer)
-			if not recipient:
+			if test_email:
+				recipients = [test_email]
+			else:
+				recipients = split_emails(soa_customer_emails.get(customer))
+				if not recipients:
+					fallback = get_customer_email(customer)
+					recipients = [fallback] if fallback else []
+			if not recipients:
 				continue
 
 			customer_name = (cu.get('cad_data') or {}).get('customer_name') or customer
@@ -488,7 +534,7 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 			pdf_content = get_pdf(html)
 
 			sendmail_kwargs = dict(
-				recipients=[recipient],
+				recipients=recipients,
 				subject=subject,
 				message=message,
 				attachments=[{
