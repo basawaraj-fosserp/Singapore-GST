@@ -623,8 +623,6 @@ p { font-size: 13px; }
 
 def build_email_body(customer_name, cad_data, ageing, doc, currency):
 	outstanding = ageing.get("outstanding") or 0
-	from_date = frappe.utils.formatdate(doc.from_date, "dd MMM YYYY") if doc.from_date else ""
-	to_date = frappe.utils.formatdate(doc.to_date, "dd MMM YYYY") if doc.to_date else ""
 	today_date = frappe.utils.formatdate(frappe.utils.today(), "dd MMM YYYY")
 
 	range1 = ageing.get("range1") or 0
@@ -655,7 +653,7 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
     <p style="margin:0 0 12px;">Dear <b>{customer_name}</b>,</p>
     <p style="margin:0 0 20px; line-height:1.6;">
       Thank you for your continued business. Please find attached your
-      <b>Statement of Accounts</b> for the period <b>{from_date}</b> to <b>{to_date}</b>.
+      <b>Statement of Accounts</b> listing all outstanding invoices on your account.
       Kindly review and arrange payment for any outstanding amounts at your earliest convenience.
     </p>
 
@@ -667,7 +665,6 @@ def build_email_body(customer_name, cad_data, ageing, doc, currency):
         </tr>
       </thead>
       <tbody>
-        {row("Statement Period", f"{from_date} &nbsp;to&nbsp; {to_date}")}
         {row("Statement Date", today_date)}
         {row("Currency", currency)}
         {row("Total Outstanding Amount", _fmt(outstanding, currency), highlight=True)}
