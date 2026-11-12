@@ -159,6 +159,9 @@ def get_statements_of_account(name, from_date=None, to_date=None):
 														out_data['cust'][0]['ageing']['range4'] -
 														out_data['cust'][0]['ageing']['range5']
 														)
+		# "Over 90 Days" column = 91-120 (range4) + 121+ (range5), same as the Outstanding PDF
+		out_data['cust'][0]['ageing']['over_90'] = (out_data['cust'][0]['ageing']['range4'] +
+													out_data['cust'][0]['ageing']['range5'])
 	return out_data
 
 
@@ -366,7 +369,7 @@ p { font-size: 13px; margin: 0px 0px 2px; }
 	<td style="width:16%" align="center"><b>1-30 Days</b></td>
 	<td style="width:16%" align="center"><b>31-60 Days</b></td>
 	<td style="width:16%" align="center"><b>61-90 Days</b></td>
-	<td style="width:16%" align="center"><b>120+ Days</b></td>
+	<td style="width:16%" align="center"><b>Over 90 Days</b></td>
 	<td style="width:16%" align="center"><b>Amount Due</b></td>
 </tr></thead>
 <tbody><tr>
@@ -374,7 +377,7 @@ p { font-size: 13px; margin: 0px 0px 2px; }
 	<td align="center">{fc(ageing.get('range1'))}</td>
 	<td align="center">{fc(ageing.get('range2'))}</td>
 	<td align="center">{fc(ageing.get('range3'))}</td>
-	<td align="center">{fc(ageing.get('range4'))}</td>
+	<td align="center">{fc(ageing.get('over_90'))}</td>
 	<td align="center">{fc(ageing.get('outstanding'))}</td>
 </tr></tbody></table>
 <center style="font-size:8px;">THIS IS A COMPUTER GENERATED DOCUMENT. NO SIGNATURE IS REQUIRED.</center>

@@ -238,7 +238,7 @@ let header = `
 				<td style="width: 16%" align="center"><b>1-30 Days</b></td>
 				<td style="width: 16%" align="center"><b>31-60 Days</b></td>
 				<td style="width: 16%" align="center"><b>61-90 Days</b></td>
-				<td style="width: 16%" align="center"><b>120+ Days</b></td>
+				<td style="width: 16%" align="center"><b>Over 90 Days</b></td>
 				<td style="width: 16%" align="center"><b>Amount Due</b></td>
 			</tr>
 		</thead>
@@ -248,7 +248,7 @@ let header = `
 				<td align="center">${(cu.ageing && cu.ageing.range1 != null)?format_currency(cu.ageing.range1):'-'}</td>
 				<td align="center">${(cu.ageing && cu.ageing.range2 != null)?format_currency(cu.ageing.range2):'-'}</td>
 				<td align="center">${(cu.ageing && cu.ageing.range3 != null)?format_currency(cu.ageing.range3):'-'}</td>
-				<td align="center">${(cu.ageing && cu.ageing.range4 != null)?format_currency(cu.ageing.range4):'-'}</td>
+				<td align="center">${(cu.ageing && cu.ageing.over_90 != null)?format_currency(cu.ageing.over_90):'-'}</td>
 				<td align="center">${(cu.ageing && cu.ageing.outstanding != null)?format_currency(cu.ageing.outstanding):'-'}</td>
 			</tr>
 		</tbody>
