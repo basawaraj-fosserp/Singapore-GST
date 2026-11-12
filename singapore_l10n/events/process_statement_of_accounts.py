@@ -737,16 +737,11 @@ def send_emails(document_name, from_scheduler=False, posting_date=None):
 		if not customer:
 			continue
 
-		single_cust_data = dict(data)
-		single_cust_data["cust"] = [cu]
-		soa_html = build_soa_html(document_name, single_cust_data)
-		report_pdf = get_pdf(soa_html, {"orientation": doc.orientation or "Portrait"})
-
 		context = get_context(customer, doc)
 		filename = frappe.render_template(doc.pdf_name, context)
-		attachments = [{"fname": filename + ".pdf", "fcontent": report_pdf}]
+		attachments = []
 
-		# second attachment: only the invoices still unpaid (skipped when everything is paid)
+		# only attachment: the invoices still unpaid (skipped when everything is paid)
 		outstanding_pdf, has_outstanding = build_outstanding_pdf(doc, [customer])
 		if has_outstanding:
 			attachments.append({"fname": f"Outstanding_{filename}.pdf", "fcontent": outstanding_pdf})
@@ -867,21 +862,12 @@ def run_soa_monthly_job(from_date, to_date, month_label):
 				if not recipients:
 					continue
 
-				single_cust_data = dict(data)
-				single_cust_data["cust"] = [cu]
-
-				soa_html = build_soa_html(doc_name, single_cust_data)
-				pdf_content = get_pdf(soa_html, {"orientation": "Portrait"})
-
 				ageing = cu.get("ageing") or {}
 				message = build_email_body(customer_name, cad, ageing, psoa_doc, currency)
 
-				attachments = [{
-					"fname": f"SOA_{cust_id}_{month_label.replace(' ', '_')}.pdf",
-					"fcontent": pdf_content,
-				}]
+				attachments = []
 
-				# second attachment: only the invoices still unpaid (skipped when everything is paid)
+				# only attachment: the invoices still unpaid (skipped when everything is paid)
 				outstanding_pdf, has_outstanding = build_outstanding_pdf(psoa_doc, [cust_id])
 				if has_outstanding:
 					attachments.append({
