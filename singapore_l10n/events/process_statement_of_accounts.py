@@ -406,11 +406,18 @@ def send_emails(document_name, from_scheduler=False):
 		return
 	html = build_soa_html(name, data)
 	pdf_content = get_pdf(html)
+	attachments = [{'fname': f"SOA_{name}.pdf", 'fcontent': pdf_content}]
+
+	# second attachment: only the invoices still unpaid (skipped when everything is paid)
+	outstanding_pdf, has_outstanding = build_outstanding_pdf(psoa_doc)
+	if has_outstanding:
+		attachments.append({'fname': f"Outstanding_{name}.pdf", 'fcontent': outstanding_pdf})
+
 	frappe.sendmail(
 		recipients=recipients,
 		subject=f"Statement of Account",
 		message=f"<p>Please find your Statement of Account attached.</p>",
-		attachments=[{'fname': f"SOA_{name}.pdf", 'fcontent': pdf_content}],
+		attachments=attachments,
 		reference_doctype='Process Statement Of Accounts',
 		reference_name=name,
 		now=True
@@ -533,14 +540,24 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 			html = build_soa_html(psoa_doc.name, data)
 			pdf_content = get_pdf(html)
 
+			attachments = [{
+				'fname': f"SOA_{customer}_{month_label.replace(' ', '_')}.pdf",
+				'fcontent': pdf_content
+			}]
+
+			# second attachment: only the invoices still unpaid (skipped when everything is paid)
+			outstanding_pdf, has_outstanding = build_outstanding_pdf(psoa_doc)
+			if has_outstanding:
+				attachments.append({
+					'fname': f"Outstanding_{customer}_{month_label.replace(' ', '_')}.pdf",
+					'fcontent': outstanding_pdf
+				})
+
 			sendmail_kwargs = dict(
 				recipients=recipients,
 				subject=subject,
 				message=message,
-				attachments=[{
-					'fname': f"SOA_{customer}_{month_label.replace(' ', '_')}.pdf",
-					'fcontent': pdf_content
-				}],
+				attachments=attachments,
 				now=True
 			)
 			if not test_email:
@@ -806,14 +823,11 @@ p { font-size: 13px; margin: 0px 0px 2px; }
 	return html
 
 
-@frappe.whitelist()
-def download_outstanding_payment(name):
-	"""Download a PDF listing only the outstanding Sales Invoices of the PSOA customers."""
+def build_outstanding_pdf(psoa_doc):
+	"""Return (pdf_bytes, has_invoices) for the outstanding Sales Invoices of the PSOA customers."""
 	from frappe.utils.pdf import get_pdf
 
-	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
-	psoa_doc.check_permission("read")
-
+	name = psoa_doc.name
 	cust_list = []
 	for cust in psoa_doc.customers:
 		cad_data = frappe.db.sql('''
@@ -848,11 +862,21 @@ def download_outstanding_payment(name):
 	}
 	html = build_outstanding_html(name, data)
 
-	frappe.local.response.filename = f"Outstanding_{name}.pdf"
-	frappe.local.response.filecontent = get_pdf(html, {
+	pdf_content = get_pdf(html, {
 		"margin-top": "5mm",
 		"margin-bottom": "5mm",
 		"margin-left": "7mm",
 		"margin-right": "7mm",
 	})
+	return pdf_content, any(c['invoices'] for c in cust_list)
+
+
+@frappe.whitelist()
+def download_outstanding_payment(name):
+	"""Download a PDF listing only the outstanding Sales Invoices of the PSOA customers."""
+	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
+	psoa_doc.check_permission("read")
+
+	frappe.local.response.filename = f"Outstanding_{name}.pdf"
+	frappe.local.response.filecontent = build_outstanding_pdf(psoa_doc)[0]
 	frappe.local.response.type = "pdf"
