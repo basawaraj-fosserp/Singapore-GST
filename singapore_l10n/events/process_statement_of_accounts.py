@@ -402,8 +402,12 @@ def send_emails(document_name, from_scheduler=False):
 	cu = data['cust'][0]
 	customer = (cu.get('cad_data') or {}).get('customer_name') or name
 	psoa_doc = frappe.get_doc('Process Statement Of Accounts', name)
-	recipients = [get_customer_email(psoa_doc.customers[0].customer)]
-	recipients = [r for r in recipients if r]
+	row = psoa_doc.customers[0]
+	# manually entered Billing Email takes priority over the customer's contact/address email
+	recipients = split_emails(row.get('billing_email'))
+	if not recipients:
+		fallback = get_customer_email(row.customer)
+		recipients = [fallback] if fallback else []
 	if not recipients:
 		frappe.msgprint("No email address found for this customer.")
 		return
