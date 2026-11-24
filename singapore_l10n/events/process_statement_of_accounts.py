@@ -237,6 +237,139 @@ def split_emails(email_string):
 	return [addr.strip() for addr in email_string.split(",") if addr.strip()]
 
 
+def _fmt(value, currency="SGD"):
+	if value is None:
+		return "-"
+	return fmt_money(value, currency=currency)
+
+
+def get_site_branding(company=None):
+	"""Return (name, absolute logo url) for the current site, used in the SOA email header."""
+	logo = (
+		frappe.db.get_single_value("Navbar Settings", "app_logo")
+		or frappe.db.get_single_value("Website Settings", "app_logo")
+		or (frappe.db.get_value("Company", company, "company_logo") if company else None)
+	)
+	if logo and not logo.startswith("http"):
+		logo = frappe.utils.get_url(logo)
+	name = company or frappe.db.get_single_value("Website Settings", "app_name") or frappe.local.site
+	return name, logo
+
+
+def build_email_body(customer_name, cad_data, ageing, doc, currency):
+	brand_name, brand_logo = get_site_branding(doc.company)
+	# Use the same invoice-based ageing as the Outstanding Payment PDF so both always match
+	customer = (cad_data or {}).get("customer")
+	if customer:
+		buckets = get_outstanding_ageing(
+			get_outstanding_invoices(customer, doc.company), doc.get("ageing_based_on")
+		)
+		ageing = {
+			"outstanding": sum(buckets),
+			"current_due": buckets[0],
+			"range1": buckets[1],
+			"range2": buckets[2],
+			"range3": buckets[3],
+			"over_90": buckets[4],
+		}
+	outstanding = ageing.get("outstanding") or 0
+	today_date = frappe.utils.formatdate(frappe.utils.today(), "dd MMM YYYY")
+
+	range1 = ageing.get("range1") or 0
+	range2 = ageing.get("range2") or 0
+	range3 = ageing.get("range3") or 0
+	over_90 = ageing.get("over_90") or 0
+	current_due = ageing.get("current_due") or 0
+
+	def row(label, value, highlight=False):
+		bg = "#fff3cd" if highlight else "#f9f9f9"
+		return f"""
+		<tr>
+			<td style="padding:8px 12px; border:1px solid #dee2e6; width:55%; background:{bg};">{label}</td>
+			<td style="padding:8px 12px; border:1px solid #dee2e6; width:45%; text-align:right; background:{bg};"><b>{value}</b></td>
+		</tr>"""
+
+	logo_tag = (
+		f'<img src="{brand_logo}" height="45" style="vertical-align:middle; margin-right:12px;">'
+		if brand_logo else ""
+	)
+
+	return f"""
+<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; max-width: 680px; margin: 0 auto;">
+
+  <!-- Header -->
+  <div style="background-color: #1a3c5e; padding: 20px 24px; border-radius: 6px 6px 0 0;">
+    {logo_tag}
+    <span style="color:#ffffff; font-size:18px; font-weight:bold; vertical-align:middle;">{brand_name}</span>
+  </div>
+
+  <!-- Greeting -->
+  <div style="padding: 24px; background:#ffffff; border-left:1px solid #dee2e6; border-right:1px solid #dee2e6;">
+    <p style="margin:0 0 12px;">Dear <b>{customer_name}</b>,</p>
+    <p style="margin:0 0 20px; line-height:1.6;">
+      Thank you for your continued business. Please find attached your
+      <b>Statement of Accounts</b> listing all outstanding invoices on your account.
+      Kindly review and arrange payment for any outstanding amounts at your earliest convenience.
+    </p>
+
+    <!-- Summary Table -->
+    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+      <thead>
+        <tr style="background-color:#1a3c5e; color:#ffffff;">
+          <th style="padding:10px 12px; text-align:left; border:1px solid #dee2e6;" colspan="2">Account Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        {row("Statement Date", today_date)}
+        {row("Currency", currency)}
+        {row("Total Outstanding Amount", _fmt(outstanding, currency), highlight=True)}
+      </tbody>
+    </table>
+
+    <!-- Ageing Table -->
+    <table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+      <thead>
+        <tr style="background-color:#1a3c5e; color:#ffffff;">
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">Current Due</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">1–30 Days</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">31–60 Days</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">61–90 Days</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">Over 90 Days</th>
+          <th style="padding:10px 12px; text-align:center; border:1px solid #dee2e6;">Amount Due</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#f9f9f9; text-align:center;">
+          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(current_due, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range1, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range2, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(range3, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;">{_fmt(over_90, currency)}</td>
+          <td style="padding:8px 12px; border:1px solid #dee2e6;"><b>{_fmt(outstanding, currency)}</b></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin:0 0 8px; line-height:1.6;">
+      Should you have any queries regarding this statement, please do not hesitate to contact us.
+    </p>
+    <p style="margin:0 0 24px; line-height:1.6;">We appreciate your prompt attention to this matter.</p>
+
+    <p style="margin:0;">Warm regards,</p>
+    <p style="margin:4px 0 0;"><b>{brand_name}</b></p>
+    <p style="margin:2px 0 0; color:#666; font-size:13px;">Web: www.sowers.com.sg &nbsp;|&nbsp; UEN/GST No: 201527820N</p>
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#f1f1f1; padding:12px 24px; border-radius:0 0 6px 6px; border:1px solid #dee2e6; border-top:none;">
+    <p style="margin:0; font-size:11px; color:#888; text-align:center;">
+      This is an automated email. Please do not reply directly to this message.
+    </p>
+  </div>
+
+</div>"""
+
+
 def build_soa_html(doc_name, data):
 	def fc(amount):
 		if amount is None:
@@ -420,7 +553,7 @@ def send_emails(document_name, from_scheduler=False):
 	frappe.sendmail(
 		recipients=recipients,
 		subject=f"Statement of Account",
-		message=f"<p>Please find your Statement of Account attached.</p>",
+		message=build_email_body(customer, cu.get('cad_data'), cu.get('ageing') or {}, psoa_doc, data.get('currency') or 'SGD'),
 		attachments=attachments,
 		reference_doctype='Process Statement Of Accounts',
 		reference_name=name,
@@ -539,7 +672,7 @@ def run_soa_monthly_job(from_date, to_date, month_label, test_email=None):
 
 			customer_name = (cu.get('cad_data') or {}).get('customer_name') or customer
 			subject = default_subject.replace('{month}', month_label)
-			message = default_message.replace('{month}', month_label).replace('{customer_name}', customer_name)
+			message = build_email_body(customer_name, cu.get('cad_data'), cu.get('ageing') or {}, psoa_doc, data.get('currency') or 'SGD')
 
 			# only attachment: the invoices still unpaid (skipped when everything is paid)
 			attachments = []
